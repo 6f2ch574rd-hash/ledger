@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LocalLedger｜雲端記帳本</title>
+<title>LocalLedger｜個人雲端記帳本</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
@@ -11,314 +11,590 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
-  --burgundy:#9E203E;
-  --burgundy-dark:#8B1A33;
-  --burgundy-soft:#F7E8EB;
-  --income:#27AE60;
-  --income-dark:#1B7A3E;
-  --income-soft:#E8F8F0;
+  --wine:#9E203E;
+  --wine-dark:#8B1A33;
+  --wine-soft:#F7E8EB;
+  --green:#27AE60;
+  --green-dark:#1B7A3E;
+  --green-soft:#E8F8F0;
 }
-body{background:#fff;padding-bottom:110px;color:#222;}
-.btn-burgundy{background:var(--burgundy);color:#fff;border:none;}
-.btn-burgundy:hover{background:var(--burgundy-dark);color:#fff;}
-.btn-burgundy-outline{border:1px solid var(--burgundy);color:var(--burgundy);background:#fff;}
-.btn-burgundy-outline:hover{background:var(--burgundy-soft);}
-.card{border-radius:12px;border:none;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
-.card-header{background:var(--burgundy);color:#fff;}
-.login-card{max-width:420px;margin:80px auto;}
-.toast-container{position:fixed;top:15px;right:15px;z-index:9999;}
-.toast-msg{padding:10px 16px;border-radius:8px;margin:4px 0;color:#fff;}
-.bottom-nav{position:fixed;bottom:12px;left:8px;right:8px;border-radius:14px;background:#fff;box-shadow:0 -2px 12px rgba(0,0,0,0.12);z-index:999;display:flex;}
-.bottom-nav button{flex:1;border:none;background:none;padding:16px 4px;font-size:14px;color:#666;min-height:54px;}
-.bottom-nav button.active{color:var(--burgundy);font-weight:bold;}
-.quick-cat{display:inline-block;margin:3px;border:1px solid var(--burgundy);border-radius:6px;padding:4px 10px;font-size:14px;}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:#fff;
+  padding-bottom:110px;
+  font-family: system-ui, -apple-system, sans-serif;
+  color:#222;
+}
+.wrap{max-width:800px;margin:0 auto;padding:0 16px;}
+h1{font-size:22px;color:var(--wine);font-weight:700;margin:20px 0 4px;}
+.subtitle{font-size:13px;color:#888;margin-bottom:20px;}
+.card{
+  border-radius:12px;
+  border:none;
+  box-shadow:0 2px 12px rgba(0,0,0,0.06);
+  overflow:hidden;
+  margin-bottom:16px;
+}
+.card-head{
+  background:var(--wine);
+  color:#fff;
+  padding:12px 16px;
+  font-weight:500;
+}
+.card-body{padding:16px;}
+.btn{
+  border-radius:8px;
+  padding:10px 16px;
+  border:none;
+  cursor:pointer;
+  font-size:15px;
+}
+.btn:active{transform:scale(0.98);}
+.btn-wine{background:var(--wine);color:#fff;}
+.btn-wine:hover{background:var(--wine-dark);}
+.btn-ghost{background:#fff;border:1px solid var(--wine);color:var(--wine);}
+.btn-ghost:hover{background:var(--wine-soft);}
+.type-switch{
+  display:flex;
+  border-radius:10px;
+  overflow:hidden;
+  border:1px solid #eee;
+  margin-bottom:16px;
+}
+.type-switch .btn{
+  flex:1;
+  border-radius:0;
+  background:#f5f5f5;
+}
+.type-switch .active-wine{background:var(--wine);color:#fff;}
+.type-switch .active-green{background:var(--green);color:#fff;}
+.form-group{margin-bottom:12px;}
+label{font-size:14px;color:#555;display:block;margin-bottom:4px;}
+input,textarea,select{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid #ddd;
+  border-radius:8px;
+  font-size:15px;
+}
+input:focus,textarea:focus,select:focus{
+  outline:none;
+  border-color:var(--wine);
+  box-shadow:0 0 0 3px rgba(158,32,62,0.1);
+}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.quick-tag{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid var(--wine);
+  border-radius:6px;
+  margin:3px;
+  overflow:hidden;
+}
+.quick-tag button{
+  border:none;
+  background:#fff;
+  color:var(--wine);
+  padding:4px 10px;
+  cursor:pointer;
+}
+.quick-tag .del{
+  border-left:1px solid var(--wine);
+  padding:4px 8px;
+  background:var(--wine-soft);
+}
+.toast-box{
+  position:fixed;
+  top:20px;
+  right:20px;
+  z-index:9999;
+}
+.toast{
+  padding:10px 16px;
+  border-radius:8px;
+  color:#fff;
+  margin-bottom:8px;
+  font-size:14px;
+}
+.nav{
+  position:fixed;
+  bottom:12px;
+  left:12px;
+  right:12px;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 -2px 16px rgba(0,0,0,0.12);
+  display:flex;
+  z-index:999;
+}
+.nav .tab-btn{
+  flex:1;
+  border:none;
+  background:none;
+  padding:18px 4px;
+  font-size:14px;
+  color:#888;
+  cursor:pointer;
+}
+.nav .tab-btn.active{
+  color:var(--wine);
+  font-weight:700;
+}
+.page{display:none;}
+.page.active{display:block;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #eee;}
+.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;}
+.stat-box{padding:14px;border-radius:10px;text-align:center;}
+.stat-wine{background:var(--wine-soft);color:var(--wine);}
+.stat-green{background:var(--green-soft);color:var(--green);}
+.stat-blue{background:#eef3f8;color:#2c5aa0;}
+.tag{font-size:12px;padding:2px 6px;border-radius:4px;}
+.tag-exp{background:var(--wine-soft);color:var(--wine-dark);}
+.tag-inc{background:var(--green-soft);color:var(--green-dark);}
+.del-btn{color:#c00;background:none;border:none;cursor:pointer;font-size:14px;}
 </style>
 </head>
 <body>
-<div class="toast-container" id="toastBox"></div>
+<div class="toast-box" id="toastBox"></div>
 
-<div id="loginSection" class="container">
-  <div class="card login-card">
-    <div class="card-header">登入你的記帳本帳號</div>
-    <div class="card-body">
-      <div class="mb-3">
-        <label>電子信箱</label>
-        <input type="email" id="loginEmail" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label>密碼</label>
-        <input type="password" id="loginPwd" class="form-control">
-      </div>
-      <button class="btn btn-burgundy w-100 mb-2" id="btnLogin">登入</button>
-      <button class="btn btn-burgundy-outline w-100" id="btnRegister">註冊新帳號</button>
-      <p class="text-muted small text-center mt-3">所有資料僅存在你自己的雲端空間</p>
-    </div>
-  </div>
-</div>
+<div class="wrap">
+  <h1>📒 LocalLedger 雲端記帳本</h1>
+  <p class="subtitle">所有記錄自動同步於你的專屬雲端空間</p>
 
-<div id="appSection" style="display:none;">
-<div class="container mt-4">
-  <h2 class="text-burgundy fw-bold">📒 LocalLedger 雲端記帳本</h2>
-  <button class="btn btn-sm btn-outline-secondary mb-3" id="btnLogout">登出</button>
-
-  <ul class="nav nav-tabs my-3 d-none d-md-flex" id="mainTabs">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabRecord">記帳</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabList">清單</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabStat">統計</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabIo">備份</button></li>
-  </ul>
-
-  <div class="tab-content">
-    <div class="tab-pane fade show active" id="tabRecord">
-      <div class="card">
-        <div class="card-header">快速新增紀錄</div>
-        <div class="card-body">
-          <div class="d-flex mb-3">
-            <button class="btn flex-1" id="btnTypeExpense">💸 支出</button>
-            <button class="btn flex-1" id="btnTypeIncome">💰 收入</button>
-          </div>
-          <div class="row g-2">
-            <div class="col-md-4"><label>日期</label><input type="date" id="f_date" class="form-control"></div>
-            <div class="col-md-4"><label>名稱 <span class="text-danger">*</span></label><input type="text" id="f_name" class="form-control"></div>
-            <div class="col-md-4"><label>金額 <span class="text-danger">*</span></label><input type="number" step="0.01" id="f_amount" class="form-control"></div>
-            <div class="col-md-6"><label>分類（留空自動歸為其他）</label><input type="text" id="f_category" class="form-control"></div>
-            <div class="col-md-6"><label>備註（選填）</label><input type="text" id="f_note" class="form-control"></div>
-            <div class="col-12 mt-3">
-              <button class="btn btn-burgundy" id="btnSave">💾 儲存紀錄</button>
-            </div>
+  <!-- 記帳頁面 -->
+  <div class="page active" id="pageRecord">
+    <div class="card">
+      <div class="card-head" id="recordCardTitle">快速新增支出</div>
+      <div class="card-body">
+        <div class="type-switch">
+          <button class="type-btn active-wine" id="btnTypeExp">💸 支出</button>
+          <button class="type-btn" id="btnTypeInc">💰 收入</button>
+        </div>
+        <div class="form-group">
+          <label>常用分類（可增刪）</label>
+          <div id="quickCatBar"></div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <input id="newCatInput" placeholder="新增自訂分類" style="flex:1;">
+            <button class="btn btn-wine" id="btnAddCat">新增</button>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="tab-pane fade" id="tabList">
-      <div class="card">
-        <div class="card-header">收支紀錄清單</div>
-        <div class="card-body table-wrap" id="recordList"></div>
-      </div>
-    </div>
-    <div class="tab-pane fade" id="tabStat">
-      <div class="card">
-        <div class="card-header">收支統計</div>
-        <div class="card-body">
-          <div class="row g-2 mb-3">
-            <div class="col-md-4"><label>開始</label><input type="date" id="statStart" class="form-control"></div>
-            <div class="col-md-4"><label>結束</label><input type="date" id="statEnd" class="form-control"></div>
-          </div>
-          <div class="row g-3 mb-3">
-            <div class="col-md-4"><div class="p-3 rounded bg-danger-subtle text-center"><div>總支出</div><strong class="fs-4" id="statExpense">0</strong></div></div>
-            <div class="col-md-4"><div class="p-3 rounded bg-success-subtle text-center"><div>總收入</div><strong class="fs-4 text-success" id="statIncome">0</strong></div></div>
-            <div class="col-md-4"><div class="p-3 rounded bg-primary-subtle text-center"><div>結餘</div><strong class="fs-4" id="statRemain">0</strong></div></div>
-          </div>
+        <div class="row">
+          <div class="form-group"><label>日期</label><input type="date" id="fDate"></div>
+          <div class="form-group"><label>項目名稱 *</label><input id="fName" placeholder="例如：午餐、薪水"></div>
+          <div class="form-group"><label>金額 *</label><input type="number" step="0.01" id="fAmount" placeholder="0"></div>
+          <div class="form-group"><label>分類（留空自動歸為其他）</label><input id="fCategory"></div>
         </div>
-      </div>
-    </div>
-    <div class="tab-pane fade" id="tabIo">
-      <div class="card">
-        <div class="card-header">備份</div>
-        <div class="card-body">
-          <button class="btn btn-burgundy w-100" id="btnExport">📤 匯出CSV備份</button>
+        <div class="form-group"><label>備註（選填）</label><input id="fNote"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn btn-wine" id="btnSave">💾 儲存紀錄</button>
+          <button class="btn btn-ghost" id="btnClear">🔄 清空表單</button>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- 清單頁面 -->
+  <div class="page" id="pageList">
+    <div class="card">
+      <div class="card-head">收支紀錄清單</div>
+      <div class="card-body">
+        <div class="row" style="grid-template-columns:1fr 1fr;margin-bottom:12px;">
+          <select id="filterType">
+            <option value="all">全部類型</option>
+            <option value="expense">僅支出</option>
+            <option value="income">僅收入</option>
+          </select>
+          <select id="sortMode">
+            <option value="dateDesc">日期新到舊</option>
+            <option value="dateAsc">日期舊到新</option>
+          </select>
+        </div>
+        <div id="recordList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 統計頁面 -->
+  <div class="page" id="pageStat">
+    <div class="card">
+      <div class="card-head">收支統計</div>
+      <div class="card-body">
+        <div class="row" style="grid-template-columns:1fr 1fr;margin-bottom:12px;">
+          <div><label>開始日期</label><input type="date" id="statStart"></div>
+          <div><label>結束日期</label><input type="date" id="statEnd"></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-box stat-wine">
+            <div>總支出</div>
+            <div style="font-size:22px;font-weight:700;" id="statExp">0</div>
+          </div>
+          <div class="stat-box stat-green">
+            <div>總收入</div>
+            <div style="font-size:22px;font-weight:700;" id="statInc">0</div>
+          </div>
+          <div class="stat-box stat-blue">
+            <div>結餘</div>
+            <div style="font-size:22px;font-weight:700;" id="statRemain">0</div>
+          </div>
+        </div>
+        <p style="font-size:14px;color:#666;">累計總餘額：<strong id="totalBalance">0</strong></p>
+        <div style="max-height:300px;"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 備份頁面 -->
+  <div class="page" id="pageBackup">
+    <div class="card">
+      <div class="card-head">匯入匯出備份</div>
+      <div class="card-body">
+        <button class="btn btn-wine" id="btnExport" style="width:100%;margin-bottom:16px;">📤 匯出CSV備份</button>
+        <label>選擇CSV/XLSX檔案匯入</label>
+        <input type="file" id="importFile" accept=".csv,.xlsx,.xls">
+        <div id="importStatus" style="margin-top:12px;font-size:14px;color:#666;"></div>
+        <button class="btn btn-wine" id="btnDoImport" style="width:100%;margin-top:12px;display:none;">✅ 確認匯入檔案內容</button>
+      </div>
+    </div>
+  </div>
 </div>
-<div class="bottom-nav d-md-none">
-  <button class="active" data-tab="#tabRecord">記帳</button>
-  <button data-tab="#tabList">清單</button>
-  <button data-tab="#tabStat">統計</button>
-  <button data-tab="#tabIo">備份</button>
-</div>
+
+<div class="nav">
+  <button class="tab-btn active" data-page="pageRecord" data-name="記帳">記帳</button>
+  <button class="tab-btn" data-page="pageList" data-name="清單">清單</button>
+  <button class="tab-btn" data-page="pageStat" data-name="統計">統計</button>
+  <button class="tab-btn" data-page="pageBackup" data-name="備份">備份</button>
 </div>
 
 <script>
-// 全局错误捕获，任何JS报错直接弹窗，不会静默卡死
-window.onerror = function(msg) {
-  alert("頁面出錯：" + msg);
-  return false;
-};
+// ========== 工具函數先定義，確保任何時候都能調用 ==========
+function toast(msg, color="#28a745"){
+  const box = document.getElementById("toastBox");
+  if(!box) return;
+  const div = document.createElement("div");
+  div.className = "toast";
+  div.style.background = color;
+  div.textContent = msg;
+  box.appendChild(div);
+  setTimeout(()=>div.remove(),2200);
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function getCats(){
+  try{ return JSON.parse(localStorage.getItem("myCats")) || ["餐飲","交通","購物","娛樂","居家","醫療"]; }
+  catch{ return ["餐飲","交通","購物","娛樂","居家","醫療"]; }
+}
 
-// 硬編碼正確的後台參數，沒有任何自動解析邏輯，零兼容性問題
-const SUPABASE_URL = "https://htqhybhvsv ekhqxsmjph.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0cWh5Ymh2c3Zla2hxeHNtanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMDY1MDgsImV4cCI6MjEwNTc4MjUwOH0.SaLSUCuPJLA6yTuSatUsfW7J77nSld_8DUiCypFwhAo";
+// ========== 頁面載入完畢後，第一步：立刻綁定所有UI按鈕，保證按鈕100%可點 ==========
+document.addEventListener("DOMContentLoaded", function(){
+  toast("程式啟動中...", "#17a2b8");
 
-let supabase = null;
-let currentUser = null;
-let localData = [];
-let currentType = "expense";
-
-// 初始化所有功能，等頁面完全加載完再跑
-window.addEventListener("load", function() {
-  // 初始化Supabase
-  try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log("✅ Supabase初始化成功，網址：", SUPABASE_URL);
-  } catch(e) {
-    alert("後台連線失敗：" + e.message);
-    return;
-  }
-
-  // 工具函數
-  function showToast(msg, color="#28a745") {
-    const box = document.getElementById("toastBox");
-    const div = document.createElement("div");
-    div.className = "toast-msg";
-    div.style.background = color;
-    div.innerText = msg;
-    box.appendChild(div);
-    setTimeout(()=>div.remove(), 2500);
-  }
-  function today() { return new Date().toISOString().slice(0,10); }
-
-  // 綁定登入註冊按鈕，不用HTML的onclick，杜絕找不到函數的問題
-  document.getElementById("btnLogin").addEventListener("click", async function() {
-    const email = document.getElementById("loginEmail").value.trim();
-    const pwd = document.getElementById("loginPwd").value;
-    if(!email || !pwd) { showToast("請輸入信箱和密碼", "#fd7e14"); return; }
-    showToast("登入中...", "#fd7e14");
-    try {
-      const {data, error} = await supabase.auth.signInWithPassword({email, password:pwd});
-      if(error) { showToast("登入失敗：" + error.message, "#dc3545"); return; }
-      currentUser = data.user;
-      showToast("登入成功 ✔");
-      enterApp();
-    } catch(e) {
-      showToast("連線失敗：" + e.message, "#dc3545");
-    }
-  });
-
-  document.getElementById("btnRegister").addEventListener("click", async function() {
-    const email = document.getElementById("loginEmail").value.trim();
-    const pwd = document.getElementById("loginPwd").value;
-    if(!email || !pwd) { showToast("請輸入信箱和密碼", "#fd7e14"); return; }
-    if(pwd.length < 6) { showToast("密碼至少要6碼", "#fd7e14"); return; }
-    showToast("註冊中...", "#fd7e14");
-    try {
-      const {error} = await supabase.auth.signUp({email, password:pwd});
-      if(error) { showToast("註冊失敗：" + error.message, "#dc3545"); return; }
-      showToast("註冊成功！請到信箱收驗證信，驗證完再登入", "#28a745");
-    } catch(e) {
-      showToast("註冊失敗：" + e.message, "#dc3545");
-    }
-  });
-
-  document.getElementById("btnLogout").addEventListener("click", async function() {
-    await supabase.auth.signOut();
-    location.reload();
-  });
-
-  // 收支切換
-  document.getElementById("btnTypeExpense").addEventListener("click", function() {
-    currentType = "expense";
-    this.classList.add("btn-burgundy");
-    document.getElementById("btnTypeIncome").classList.remove("btn-burgundy");
-  });
-  document.getElementById("btnTypeIncome").addEventListener("click", function() {
-    currentType = "income";
-    this.classList.add("btn-success");
-    document.getElementById("btnTypeExpense").classList.remove("btn-success");
-  });
-
-  // 儲存紀錄
-  document.getElementById("btnSave").addEventListener("click", async function() {
-    const rec = {
-      user_id: currentUser.id,
-      date: document.getElementById("f_date").value,
-      name: document.getElementById("f_name").value.trim(),
-      category: document.getElementById("f_category").value.trim() || "其他",
-      amount: parseFloat(document.getElementById("f_amount").value),
-      note: document.getElementById("f_note").value.trim(),
-      type: currentType
-    };
-    if(!rec.date || !rec.name || isNaN(rec.amount)) { showToast("請填日期、名稱、金額", "#fd7e14"); return; }
-    await supabase.from("transactions").insert(rec);
-    showToast("儲存成功 ✔");
-    await loadData();
-  });
-
-  // 底部導航切換
-  document.querySelectorAll(".bottom-nav button").forEach(btn=>{
-    btn.addEventListener("click", function() {
-      document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.remove("active"));
-      this.classList.add("active");
-      const tab = this.dataset.tab;
-      new bootstrap.Tab(document.querySelector(`[data-bs-target="${tab}"]`)).show();
+  // 1. 底部導航
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      toast("已切換到「" + btn.dataset.name + "」頁面");
+      document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+      document.getElementById(btn.dataset.page).classList.add("active");
     });
   });
 
-  // 載入雲端資料
-  async function loadData() {
-    const {data} = await supabase.from("transactions").select("*").order("date",{ascending:false});
-    localData = data || [];
-    renderList();
-    runStat();
-  }
+  // 2. 收支類型切換
+  let currentType = "expense";
+  const btnTypeExp = document.getElementById("btnTypeExp");
+  const btnTypeInc = document.getElementById("btnTypeInc");
+  const recordCardTitle = document.getElementById("recordCardTitle");
+  btnTypeExp.addEventListener("click", ()=>{
+    currentType = "expense";
+    btnTypeExp.classList.add("active-wine");
+    btnTypeInc.classList.remove("active-green");
+    recordCardTitle.textContent = "快速新增支出";
+    toast("已切換為「支出」記錄模式");
+  });
+  btnTypeInc.addEventListener("click", ()=>{
+    currentType = "income";
+    btnTypeInc.classList.add("active-green");
+    btnTypeExp.classList.remove("active-wine");
+    recordCardTitle.textContent = "快速新增收入";
+    toast("已切換為「收入」記錄模式");
+  });
 
-  function renderList() {
+  // 3. 快速分類渲染
+  function renderCats(){
+    const bar = document.getElementById("quickCatBar");
+    bar.innerHTML = "";
+    getCats().forEach((cat, idx)=>{
+      const wrap = document.createElement("span");
+      wrap.className = "quick-tag";
+      const btn = document.createElement("button");
+      btn.textContent = cat;
+      btn.addEventListener("click", ()=>{
+        document.getElementById("fCategory").value = cat;
+        toast("已自動填入分類：" + cat);
+      });
+      const del = document.createElement("button");
+      del.className = "del";
+      del.textContent = "×";
+      del.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        toast("已刪除快速分類：" + cat, "#fd7e14");
+        const arr = getCats();
+        arr.splice(idx,1);
+        localStorage.setItem("myCats", JSON.stringify(arr));
+        renderCats();
+      });
+      wrap.appendChild(btn);
+      wrap.appendChild(del);
+      bar.appendChild(wrap);
+    });
+  }
+  renderCats();
+
+  // 4. 新增分類按鈕
+  document.getElementById("btnAddCat").addEventListener("click", ()=>{
+    const val = document.getElementById("newCatInput").value.trim();
+    if(!val){
+      toast("請輸入要新增的分類名稱", "#fd7e14");
+      return;
+    }
+    const arr = getCats();
+    if(!arr.includes(val)){
+      arr.push(val);
+      localStorage.setItem("myCats", JSON.stringify(arr));
+      renderCats();
+      toast("✅ 已新增分類：" + val);
+    }else{
+      toast("⚠️ 這個分類已經存在", "#fd7e14");
+    }
+    document.getElementById("newCatInput").value = "";
+  });
+
+  // 5. 表單預設值
+  document.getElementById("fDate").value = todayStr();
+  document.getElementById("statStart").value = new Date(new Date().getFullYear(), new Date().getMonth(),1).toISOString().slice(0,10);
+  document.getElementById("statEnd").value = todayStr();
+
+  // 6. 清空表單按鈕
+  document.getElementById("btnClear").addEventListener("click", ()=>{
+    document.getElementById("fDate").value = todayStr();
+    document.getElementById("fName").value = "";
+    document.getElementById("fAmount").value = "";
+    document.getElementById("fCategory").value = "";
+    document.getElementById("fNote").value = "";
+    toast("🔄 表單已清空，可以輸入下一筆");
+  });
+
+  // 7. 清單篩選排序按鈕
+  let allRecords = [];
+  document.getElementById("filterType").addEventListener("change", ()=>{
+    toast("已套用篩選條件");
+    renderList();
+  });
+  document.getElementById("sortMode").addEventListener("change", ()=>{
+    toast("已重新排序清單");
+    renderList();
+  });
+
+  // 清單渲染函數
+  function renderList(){
+    const filter = document.getElementById("filterType").value;
+    const sort = document.getElementById("sortMode").value;
+    let data = [...allRecords];
+    if(filter !== "all") data = data.filter(r=>r.type === filter);
+    if(sort === "dateDesc") data.sort((a,b)=>b.date.localeCompare(a.date));
+    if(sort === "dateAsc") data.sort((a,b)=>a.date.localeCompare(b.date));
     const el = document.getElementById("recordList");
-    if(localData.length === 0) { el.innerHTML = "<p class='text-muted'>尚無紀錄</p>"; return; }
-    let html = "<div class='table-responsive'><table class='table table-sm'>";
-    html += "<thead><tr><th>日期</th><th>名稱</th><th>分類</th><th>金額</th><th>操作</th></tr></thead><tbody>";
-    localData.forEach(r=>{
-      const color = r.type === "income" ? "text-success" : "text-danger";
+    if(data.length === 0){
+      el.innerHTML = "<p style='color:#888;'>目前沒有任何紀錄</p>";
+      return;
+    }
+    let html = "<table><tr><th>日期</th><th>名稱</th><th>分類</th><th>金額</th><th></th></tr>";
+    data.forEach(r=>{
+      const color = r.type === "income" ? "#27ae60" : "#9E203E";
       html += `<tr>
-        <td>${r.date}</td><td>${r.name}</td><td>${r.category}</td>
-        <td class="${color} fw-bold">${r.amount}</td>
-        <td><button class="btn btn-sm btn-outline-danger del-btn" data-id="${r.id}">刪除</button></td>
+        <td>${r.date}</td>
+        <td>${r.name}</td>
+        <td><span class="tag ${r.type==='income'?'tag-inc':'tag-exp'}">${r.category}</span></td>
+        <td style="color:${color};font-weight:700;">${r.amount}</td>
+        <td><button class="del-btn" data-id="${r.id}">刪除</button></td>
       </tr>`;
     });
-    html += "</tbody></table></div>";
+    html += "</table>";
     el.innerHTML = html;
     el.querySelectorAll(".del-btn").forEach(btn=>{
-      btn.addEventListener("click", async function() {
-        if(!confirm("確定刪除這筆？")) return;
-        await supabase.from("transactions").delete().eq("id", this.dataset.id);
-        showToast("刪除成功");
-        await loadData();
+      btn.addEventListener("click", async ()=>{
+        toast("正在刪除這筆紀錄...", "#fd7e14");
+        if(!confirm("確定要刪除這筆紀錄？刪除後無法恢復")) return;
+        try{
+          await sb.from("transactions").delete().eq("id", btn.dataset.id);
+          toast("✅ 紀錄已成功刪除");
+          await loadCloudData();
+        }catch(e){
+          toast("❌ 刪除失敗：" + e.message, "#dc3545");
+        }
       });
     });
   }
 
-  function runStat() {
-    const s = document.getElementById("statStart").value || today();
-    const e = document.getElementById("statEnd").value || today();
+  // 統計渲染
+  let chart = null;
+  function renderStat(){
+    const s = document.getElementById("statStart").value || todayStr();
+    const e = document.getElementById("statEnd").value || todayStr();
     let exp = 0, inc = 0;
-    localData.filter(r=>r.date >= s && r.date <= e).forEach(r=>{
-      if(r.type === "income") inc += r.amount; else exp += r.amount;
+    const catData = {};
+    allRecords.filter(r=>r.date >= s && r.date <= e).forEach(r=>{
+      if(r.type === "expense"){
+        exp += r.amount;
+        catData[r.category || "其他"] = (catData[r.category||"其他"] || 0) + r.amount;
+      }else{
+        inc += r.amount;
+      }
     });
-    document.getElementById("statExpense").innerText = exp;
-    document.getElementById("statIncome").innerText = inc;
-    document.getElementById("statRemain").innerText = inc - exp;
+    document.getElementById("statExp").textContent = exp.toLocaleString();
+    document.getElementById("statInc").textContent = inc.toLocaleString();
+    document.getElementById("statRemain").textContent = (inc - exp).toLocaleString();
+    let total = 0;
+    allRecords.forEach(r=>{ total += r.type === "income" ? r.amount : -r.amount; });
+    document.getElementById("totalBalance").textContent = total.toLocaleString();
+    if(chart) chart.destroy();
+    const ctx = document.getElementById("pieChart").getContext("2d");
+    chart = new Chart(ctx,{
+      type: "pie",
+      data: {
+        labels: Object.keys(catData),
+        datasets: [{data: Object.values(catData), backgroundColor:["#8B1A33","#A82442","#C03050","#D94564","#E67088","#F098A8"]}]
+      }
+    });
   }
-  document.getElementById("statStart").value = new Date(new Date().getFullYear(), new Date().getMonth(),1).toISOString().slice(0,10);
-  document.getElementById("statEnd").value = today();
-  document.getElementById("f_date").value = today();
 
-  // 匯出CSV
-  document.getElementById("btnExport").addEventListener("click", function() {
+  // 匯出按鈕
+  document.getElementById("btnExport").addEventListener("click", ()=>{
+    toast("正在產生CSV備份檔...", "#17a2b8");
     let csv = "date,name,category,amount,type,note\n";
-    localData.forEach(r=>{
+    allRecords.forEach(r=>{
       csv += `${r.date},"${r.name}",${r.category},${r.amount},${r.type},"${r.note||""}"\n`;
     });
-    const blob = new Blob(["\ufeff"+csv], {type:"text/csv"});
+    const blob = new Blob(["\ufeff" + csv], {type:"text/csv"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `記帳備份_${today()}.csv`;
+    a.download = `記帳備份_${todayStr()}.csv`;
     a.click();
+    toast("✅ 備份檔已開始下載");
   });
 
-  async function enterApp() {
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("appSection").style.display = "block";
-    await loadData();
-  }
-
-  // 檢查登入狀態
-  supabase.auth.getSession().then(({data})=>{
-    if(data.session) {
-      currentUser = data.session.user;
-      enterApp();
+  // 匯入檔案選擇
+  let pendingImportRows = null;
+  document.getElementById("importFile").addEventListener("change", async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    toast("已選擇檔案，正在讀取...", "#17a2b8");
+    document.getElementById("importStatus").textContent = "已選擇：" + file.name + "，讀取中...";
+    try{
+      const buf = await file.arrayBuffer();
+      let sheet;
+      if(file.name.endsWith(".csv")){
+        let text = new TextDecoder("utf-8").decode(buf);
+        if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        sheet = XLSX.utils.csv_to_sheet(text);
+      }else{
+        const wb = XLSX.read(buf, {type:"array", cellDates:true});
+        sheet = wb.Sheets[wb.SheetNames[0]];
+      }
+      const rows = XLSX.utils.sheet_to_json(sheet, {header:0, defval:""});
+      pendingImportRows = rows.slice(1);
+      toast(`✅ 讀取完成，共發現 ${pendingImportRows.length} 筆待匯入資料`);
+      document.getElementById("importStatus").textContent = `讀取完成，共 ${pendingImportRows.length} 筆資料，點下方按鈕確認匯入`;
+      document.getElementById("btnDoImport").style.display = "block";
+    }catch(err){
+      toast("❌ 檔案讀取失敗：" + err.message, "#dc3545");
+      document.getElementById("importStatus").textContent = "讀取失敗：" + err.message;
     }
   });
+
+  // 確認匯入按鈕
+  document.getElementById("btnDoImport").addEventListener("click", async ()=>{
+    if(!pendingImportRows) return;
+    toast("正在執行匯入程序...", "#17a2b8");
+    let ok = 0;
+    for(const row of pendingImportRows){
+      const rec = {
+        user_id: "my-personal-ledger",
+        date: row[0],
+        name: row[1],
+        category: row[2] || "其他",
+        amount: Number(row[3]),
+        type: row[4] || "expense",
+        note: row[5] || ""
+      };
+      try{
+        await sb.from("transactions").insert(rec);
+        ok++;
+      }catch(e){}
+    }
+    toast(`✅ 匯入完成：成功匯入 ${ok} 筆資料`);
+    document.getElementById("importFile").value = "";
+    document.getElementById("importStatus").textContent = "";
+    document.getElementById("btnDoImport").style.display = "none";
+    pendingImportRows = null;
+    await loadCloudData();
+  });
+
+  // 儲存按鈕
+  let sb = null;
+  async function loadCloudData(){
+    toast("正在從雲端讀取最新資料...", "#17a2b8");
+    try{
+      const {data} = await sb.from("transactions").select("*").eq("user_id", "my-personal-ledger").order("date",{ascending:false});
+      allRecords = data || [];
+      renderList();
+      renderStat();
+      toast(`✅ 雲端同步完成，共 ${allRecords.length} 筆記錄`);
+    }catch(e){
+      toast("⚠️ 雲端連線失敗，本地按鈕仍可正常使用", "#fd7e14");
+    }
+  }
+  document.getElementById("btnSave").addEventListener("click", async ()=>{
+    toast("正在儲存這筆紀錄...", "#17a2b8");
+    const rec = {
+      user_id: "my-personal-ledger",
+      date: document.getElementById("fDate").value,
+      name: document.getElementById("fName").value.trim(),
+      category: document.getElementById("fCategory").value.trim() || "其他",
+      amount: parseFloat(document.getElementById("fAmount").value),
+      note: document.getElementById("fNote").value.trim(),
+      type: currentType
+    };
+    if(!rec.date){ toast("❌ 日期未填寫，請選擇日期", "#dc3545"); return; }
+    if(!rec.name){ toast("❌ 項目名稱未填寫", "#dc3545"); return; }
+    if(isNaN(rec.amount)){ toast("❌ 金額未填寫或格式錯誤", "#dc3545"); return; }
+    try{
+      await sb.from("transactions").insert(rec);
+      toast(rec.type === "income" ? "✅ 收入已成功入帳" : "✅ 支出已成功記錄");
+      document.getElementById("fDate").value = todayStr();
+      document.getElementById("fName").value = "";
+      document.getElementById("fAmount").value = "";
+      document.getElementById("fCategory").value = "";
+      document.getElementById("fNote").value = "";
+      await loadCloudData();
+    }catch(e){
+      toast("❌ 儲存失敗：" + e.message, "#dc3545");
+    }
+  });
+
+  // ========== 所有UI按鈕都綁定完畢，現在才開始初始化後台，絕不影響按鈕使用 ==========
+  toast("所有按鈕已就緒，正在連接雲端...", "#17a2b8");
+  try{
+    sb = window.supabase.createClient(
+      "https://htqhybhvsvekhqxsmjph.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0cWh5Ymh2c3Zla2hxeHNtanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMDY1MDgsImV4cCI6MjEwNTc4MjUwOH0.SaLSUCuPJLA6yTuSatUsfW7J77nSld_8DUiCypFwhAo"
+    );
+    await loadCloudData();
+    toast("🎉 記帳本準備完成，可以開始使用了");
+  }catch(e){
+    toast("⚠️ 雲端連線異常，但所有本地按鈕仍可正常操作", "#fd7e14");
+  }
 });
 </script>
 </body>

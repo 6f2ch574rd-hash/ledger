@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocalLedger｜雲端同步版記帳本</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --burgundy-dark:#8B1A33;
+  --burgundy-main:#9E203E;
+  --burgundy-light:#B83250;
+  --burgundy-soft:#F7E8EB;
+  --income-dark:#1B7A3E;
+  --income-main:#27AE60;
+  --income-soft:#E8F8F0;
+  --text-dark:#2D2D2D;
+}
+body{
+  background-color:#fff;
+  color:var(--text-dark);
+  padding-bottom:110px;
+}
+.btn-burgundy{
+  background-color:var(--burgundy-main);
+  color:white;
+  border:none;
+}
+.btn-burgundy:hover{
+  background-color:var(--burgundy-dark);
+  color:white;
+}
+.btn-income{
+  background-color:var(--income-main);
+  color:white;
+  border:none;
+}
+.btn-income:hover{
+  background-color:var(--income-dark);
+  color:white;
+}
+.btn-burgundy-outline{
+  border:1px solid var(--burgundy-main);
+  color:var(--burgundy-main);
+  background:white;
+}
+.btn-burgundy-outline:hover{
+  background:var(--burgundy-soft);
+  color:var(--burgundy-dark);
+}
+.text-burgundy{ color:var(--burgundy-main); }
+.text-income{ color:var(--income-main); }
+.card{
+  border-radius:12px;
+  border:none;
+  box-shadow:0 2px 10px rgba(139,26,51,0.08);
+  overflow:hidden;
+}
+.card-header{
+  background:var(--burgundy-main);
+  color:white;
+  font-weight:500;
+}
+.card-header.income-header{
+  background:var(--income-main);
+}
+.form-control:focus, .form-select:focus{
+  border-color:var(--burgundy-light);
+  box-shadow:0 0 0 0.2rem rgba(158,32,62,0.15);
+}
+.nav-tabs .nav-link{ color:#666; }
+.nav-tabs .nav-link.active{
+  color:var(--burgundy-main);
+  border-color:var(--burgundy-main);
+  border-bottom-color:white;
+  font-weight:500;
+}
+.quick-cat-wrap{
+  display:inline-flex;
+  align-items:stretch;
+  margin:3px;
+  border:1px solid var(--burgundy-main);
+  border-radius:6px;
+  overflow:hidden;
+}
+.quick-cat{
+  border:none;
+  margin:0;
+  border-radius:0;
+  padding:4px 10px;
+}
+.quick-cat-del{
+  border:none;
+  background:var(--burgundy-soft);
+  color:var(--burgundy-main);
+  padding:0 8px;
+  font-size:16px;
+  line-height:1;
+  cursor:pointer;
+}
+.quick-cat-del:hover{
+  background:var(--burgundy-main);
+  color:white;
+}
+.type-switch{
+  display:flex;
+  border-radius:8px;
+  overflow:hidden;
+  margin-bottom:12px;
+  border:1px solid #ddd;
+}
+.type-switch button{
+  flex:1;
+  border:none;
+  padding:10px;
+  background:#f5f5f5;
+}
+.type-switch button.active-expense{
+  background:var(--burgundy-main);
+  color:white;
+}
+.type-switch button.active-income{
+  background:var(--income-main);
+  color:white;
+}
+.bottom-nav{
+  position:fixed;
+  bottom:12px;
+  left:8px;
+  right:8px;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 -2px 12px rgba(0,0,0,0.12);
+  z-index:999;
+  display:flex;
+}
+.bottom-nav button{
+  flex:1;
+  border:none;
+  background:none;
+  padding:16px 4px;
+  font-size:14px;
+  color:#666;
+  min-height:54px;
+}
+.bottom-nav button.active{
+  color:var(--burgundy-main);
+  font-weight:bold;
+}
+.toast-container{
+  position:fixed;
+  top:15px;
+  right:15px;
+  z-index:9999;
+}
+.tag-month{
+  background:#ffe9ec;
+  color:var(--burgundy-dark);
+  font-size:0.75rem;
+  padding:2px 6px;
+  border-radius:6px;
+}
+.tag-income{
+  background:#e8f8f0;
+  color:var(--income-dark);
+  font-size:0.75rem;
+  padding:2px 6px;
+  border-radius:6px;
+}
+.table-wrap{ max-height:420px; overflow:auto; }
+.stat-card{
+  padding:12px;
+  border-radius:8px;
+  text-align:center;
+}
+.stat-expense{ background:var(--burgundy-soft); }
+.stat-income{ background:var(--income-soft); }
+.stat-balance{ background:#eef3f8; }
+.import-file-info{
+  background:#f8f9fa;
+  padding:8px 12px;
+  border-radius:6px;
+  margin-bottom:10px;
+  font-size:0.9rem;
+}
+.import-action-bar{
+  margin-top:16px;
+  text-align:center;
+}
+.del-btn{ cursor:pointer; }
+.login-card{
+  max-width:420px;
+  margin:80px auto;
+}
+</style>
+</head>
+<body>
+<div class="toast-container" id="toastBox"></div>
+
+<!-- 登入/註冊區塊（未登入時顯示） -->
+<div id="loginSection" class="container">
+  <div class="card login-card">
+    <div class="card-header">登入你的記帳本帳號</div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label>電子信箱</label>
+        <input type="email" id="loginEmail" class="form-control" placeholder="your@email.com">
+      </div>
+      <div class="mb-3">
+        <label>密碼</label>
+        <input type="password" id="loginPwd" class="form-control" placeholder="至少6碼">
+      </div>
+      <button class="btn btn-burgundy w-100 mb-2" onclick="login()">登入</button>
+      <button class="btn btn-burgundy-outline w-100" onclick="register()">註冊新帳號</button>
+      <p class="text-muted small text-center mt-3">註冊後系統會發送驗證信，驗證完即可使用；所有資料只存在你自己的專案空間</p>
+    </div>
+  </div>
+</div>
+
+<!-- 主記帳介面（登入後顯示） -->
+<div id="appSection" style="display:none;">
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="text-burgundy fw-bold m-0">📒 LocalLedger</h2>
+    <button class="btn btn-sm btn-outline-secondary" onclick="logout()">登出</button>
+  </div>
+  <p class="text-secondary small">雲端同步版｜所有記錄自動同步到你的專屬後台</p>
+
+  <ul class="nav nav-tabs my-3 d-none d-md-flex" id="mainTabs">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabRecord">記帳</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabList">紀錄清單</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabStat">收支統計</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabIo">匯入／匯出備份</button></li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- 記帳分頁 -->
+    <div class="tab-pane fade show active" id="tabRecord">
+      <div class="card">
+        <div class="card-header" id="recordCardHeader">快速新增消費支出</div>
+        <div class="card-body">
+          <input type="hidden" id="editId">
+          <input type="hidden" id="currentType" value="expense">
+          <div class="type-switch">
+            <button id="btnTypeExpense" class="active-expense" onclick="switchType('expense')">💸 支出</button>
+            <button id="btnTypeIncome" onclick="switchType('income')">💰 收入</button>
+          </div>
+          <div class="mb-3">
+            <span class="text-secondary small">常用分類一鍵填入（可新增／刪除自訂分類）：</span>
+            <div id="quickCatBar"></div>
+            <div class="mt-2">
+              <input type="text" id="newCatInput" class="form-control d-inline w-auto" placeholder="新增自訂分類">
+              <button type="button" class="btn btn-sm btn-burgundy ms-1" onclick="addCustomCategory()">＋新增</button>
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col-md-4"><label>日期</label><input type="date" id="f_date" class="form-control" required></div>
+            <div class="col-md-4"><label>時間</label><input type="time" id="f_time" class="form-control"></div>
+            <div class="col-md-4"><label>幣別</label><input type="text" id="f_currency" class="form-control" value="TWD"></div>
+            <div class="col-md-6"><label>項目名稱 <span class="text-danger">*</span></label><input type="text" id="f_name" class="form-control" required></div>
+            <div class="col-md-6"><label>分類 <span class="text-muted small">留空自動歸為「其他」</span></label><input type="text" id="f_category" class="form-control"></div>
+            <div class="col-md-6"><label>金額 <span class="text-danger">*</span></label><input type="number" step="0.01" id="f_amount" class="form-control" required></div>
+            <div class="col-md-6"><label>當時匯率（可留空）</label><input type="number" step="0.000001" id="f_exrate" class="form-control"></div>
+            <div class="col-12"><label>備註 <span class="text-muted small">選填</span></label><textarea id="f_note" class="form-control" rows="2"></textarea></div>
+            <div class="col-12"><label>來源</label><input type="text" id="f_source" class="form-control" value="手動輸入"></div>
+            <div class="col-12 mt-3">
+              <button class="btn btn-burgundy" id="saveBtn" onclick="saveRecord()">💾 儲存紀錄</button>
+              <button class="btn btn-burgundy-outline ms-2" onclick="clearForm()">🔄 新增下一筆</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 清單分頁 -->
+    <div class="tab-pane fade" id="tabList">
+      <div class="card">
+        <div class="card-header">收支紀錄清單
+          <span class="float-end small">
+            <select id="filterType" onchange="refreshList()" class="form-select form-select-sm d-inline w-auto text-white bg-transparent border-0">
+              <option value="all">全部</option>
+              <option value="expense">僅支出</option>
+              <option value="income">僅收入</option>
+            </select>
+            <select id="sortSel" onchange="refreshList()" class="form-select form-select-sm d-inline w-auto text-white bg-transparent border-0 ms-2">
+              <option value="date-desc">日期新→舊</option>
+              <option value="date-asc">日期舊→新</option>
+              <option value="amount-desc">金額高→低</option>
+              <option value="amount-asc">金額低→高</option>
+            </select>
+          </span>
+        </div>
+        <div class="card-body table-wrap" id="recordListContainer">
+          <div id="recordList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 統計分頁 -->
+    <div class="tab-pane fade" id="tabStat">
+      <div class="card">
+        <div class="card-header">日期區間收支統計</div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-md-4"><label>開始日期</label><input type="date" id="statStart" class="form-control"></div>
+            <div class="col-md-4"><label>結束日期</label><input type="date" id="statEnd" class="form-control"></div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check me-2">
+                <input class="form-check-input" type="checkbox" id="useExchangeConvert">
+                <label class="form-check-label">匯率換算基準幣</label>
+              </div>
+              <button class="btn btn-burgundy" onclick="runStat()">計算</button>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-4"><div class="stat-card stat-expense">
+              <div class="small text-secondary">區間總支出</div>
+              <div class="fs-4 text-burgundy fw-bold" id="statExpense">0</div>
+            </div></div>
+            <div class="col-md-4"><div class="stat-card stat-income">
+              <div class="small text-secondary">區間總收入</div>
+              <div class="fs-4 text-income fw-bold" id="statIncome">0</div>
+            </div></div>
+            <div class="col-md-4"><div class="stat-card stat-balance">
+              <div class="small text-secondary">區間結餘</div>
+              <div class="fs-4 fw-bold" id="statRemain">0</div>
+            </div></div>
+          </div>
+          <p class="text-secondary small mb-1">累計總餘額（全部歷史）：<strong id="totalBalance">0</strong></p>
+          <div class="mt-2">
+            <div class="btn-group btn-group-sm mb-2">
+              <button class="btn btn-burgundy" id="chartTypeExpense" onclick="switchChart('expense')">支出分類</button>
+              <button class="btn btn-outline-secondary" id="chartTypeIncome" onclick="switchChart('income')">收入分類</button>
+            </div>
+            <div id="chartContainer" style="max-height:380px;"><canvas id="catChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 匯入匯出分頁 -->
+    <div class="tab-pane fade" id="tabIo">
+      <div class="card">
+        <div class="card-header">匯出移植備份</div>
+        <div class="card-body">
+          <button class="btn btn-burgundy" onclick="exportLedgerCsv()">📤 匯出雲端帳本CSV</button>
+        </div>
+      </div>
+      <div class="card mt-3">
+        <div class="card-header">匯入 CSV / XLSX</div>
+        <div class="card-body">
+          <label>選擇檔案</label>
+          <input type="file" id="importFile" accept=".csv,.xlsx,.xls" class="form-control mb-2">
+          <div id="importFileInfo" class="import-file-info d-none">已選擇：<span id="importFileName"></span></div>
+          <div id="importMapUi"></div>
+          <div class="import-action-bar">
+            <button id="doImportBtn" class="btn btn-burgundy btn-lg d-none" onclick="confirmImport()">✅ 確認並執行匯入</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-nav d-md-none">
+  <button onclick="goTab('#tabRecord',this)">記帳</button>
+  <button onclick="goTab('#tabList',this)">清單</button>
+  <button onclick="goTab('#tabStat',this)">統計</button>
+  <button onclick="goTab('#tabIo',this)">備份</button>
+</div>
+</div>
+
+<script>
+// ========== Supabase 初始化（已修正所有網址錯誤） ==========
+const SUPABASE_URL = "https://htqhybhvsv ekhqxsmjph.supabase.co".replace(/\s/g, "");
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0cWh5Ymh2c3Zla2hxeHNtanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMDY1MDgsImV4cCI6MjEwNTc4MjUwOH0.SaLSUCuPJLA6yTuSatUsfW7J77nSld_8DUiCypFwhAo";
+let supabase = null;
+try{
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}catch(e){
+  document.write("<p style='color:red;padding:20px'>後台連線初始化失敗：" + e.message + "</p>");
+}
+
+const STANDARD_FIELDS = ["date","time","name","category","amount","currency","exchangeRate","note","source"];
+const EXPORT_FIELDS = [...STANDARD_FIELDS, "type"];
+const DEFAULT_CATEGORIES = ["餐飲","交通","購物","娛樂","居家","醫療"];
+let currentUser = null;
+let localAllRecords = [];
+let currentChartType = "expense";
+let chartObj = null;
+let importRawRows = null;
+
+// ========== 工具函數 ==========
+function showToast(msg,type="success"){
+  const box = document.getElementById("toastBox");
+  const color = type==="success"?"#28a745":type==="warn"?"#fd7e14":"#dc3545";
+  const div = document.createElement("div");
+  div.style=`background:${color};color:white;padding:8px 14px;border-radius:8px;margin:4px 0;`;
+  div.innerText=msg;
+  box.appendChild(div);
+  setTimeout(()=>div.remove(),2200);
+}
+function getTodayStr(){ return new Date().toISOString().slice(0,10); }
+function getNowTimeStr(){
+  const d=new Date();
+  return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+}
+function escapeHtml(s){
+  if(!s) return "";
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function parseDateValue(dateVal){
+  if(dateVal instanceof Date && !isNaN(dateVal.getTime())){
+    return `${dateVal.getFullYear()}-${String(dateVal.getMonth()+1).padStart(2,'0')}-${String(dateVal.getDate()).padStart(2,'0')}`;
+  }
+  if(typeof dateVal === 'number'){
+    const utcDays = Math.floor(dateVal) - 25569;
+    const date = new Date(utcDays * 86400 * 1000);
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}-${String(date.getUTCDate()).padStart(2,'0')}`;
+  }
+  const str = String(dateVal || "").trim();
+  if(!str) return null;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(str)){
+    const [y,m,d] = str.split('/');
+    return `${y}-${m}-${d}`;
+  }
+  const d = new Date(str);
+  if(!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return null;
+}
+
+// ========== 登入/註冊/登出 ==========
+async function login(){
+  const email = document.getElementById("loginEmail").value.trim();
+  const pwd = document.getElementById("loginPwd").value;
+  if(!email || !pwd){
+    showToast("請輸入信箱和密碼","warn");
+    return;
+  }
+  showToast("登入中...","warn");
+  try{
+    const {data,error} = await supabase.auth.signInWithPassword({email,password:pwd});
+    if(error){
+      showToast("登入失敗："+error.message,"error");
+      return;
+    }
+    currentUser = data.user;
+    showToast("登入成功 ✔");
+    enterApp();
+  }catch(e){
+    showToast("連線失敗："+e.message,"error");
+  }
+}
+async function register(){
+  const email = document.getElementById("loginEmail").value.trim();
+  const pwd = document.getElementById("loginPwd").value;
+  if(!email || !pwd){
+    showToast("請輸入信箱和密碼","warn");
+    return;
+  }
+  if(pwd.length < 6){
+    showToast("密碼至少要6碼","warn");
+    return;
+  }
+  showToast("註冊中...","warn");
+  try{
+    const {error} = await supabase.auth.signUp({email,password:pwd});
+    if(error){
+      showToast("註冊失敗："+error.message,"error");
+      return;
+    }
+    showToast("註冊成功！請到信箱收驗證信，驗證完再登入");
+  }catch(e){
+    showToast("註冊連線失敗："+e.message,"error");
+  }
+}
+async function logout(){
+  await supabase.auth.signOut();
+  location.reload();
+}
+async function enterApp(){
+  document.getElementById("loginSection").style.display = "none";
+  document.getElementById("appSection").style.display = "block";
+  renderQuickCategoryButtons();
+  clearForm();
+  await loadCloudData();
+  const now = new Date();
+  document.getElementById("statStart").value = new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+  document.getElementById("statEnd").value = getTodayStr();
+  document.querySelector(".bottom-nav button").classList.add("active");
+}
+
+// ========== 雲端資料讀寫 ==========
+async function loadCloudData(){
+  showToast("同步雲端資料中...","warn");
+  try{
+    const {data,error} = await supabase.from("transactions").select("*").order("date",{ascending:false});
+    if(error){
+      showToast("同步失敗："+error.message,"error");
+      return;
+    }
+    localAllRecords = data || [];
+    refreshList();
+    showToast(`同步完成，共 ${localAllRecords.length} 筆紀錄 ✔`);
+  }catch(e){
+    showToast("同步失敗："+e.message,"error");
+  }
+}
+async function addRecord(rec){
+  rec.user_id = currentUser.id;
+  const {error} = await supabase.from("transactions").insert(rec);
+  if(error) throw error;
+}
+async function putRecord(rec){
+  const {error} = await supabase.from("transactions").update(rec).eq("id", rec.id);
+  if(error) throw error;
+}
+async function deleteRecordById(id){
+  const {error} = await supabase.from("transactions").delete().eq("id", id);
+  if(error) throw error;
+}
+
+// ========== 自訂分類 ==========
+function getCategories(){
+  const raw = localStorage.getItem("customCategories");
+  if(!raw) return [...DEFAULT_CATEGORIES];
+  try{ return JSON.parse(raw); }catch{ return [...DEFAULT_CATEGORIES]; }
+}
+function saveCategories(arr){
+  localStorage.setItem("customCategories",JSON.stringify(arr));
+  renderQuickCategoryButtons();
+}
+function renderQuickCategoryButtons(){
+  const bar = document.getElementById("quickCatBar");
+  const cats = getCategories();
+  bar.innerHTML = "";
+  cats.forEach((c, index)=>{
+    const wrap = document.createElement("span");
+    wrap.className = "quick-cat-wrap";
+    const btn = document.createElement("button");
+    btn.className = "btn btn-sm btn-burgundy-outline quick-cat";
+    btn.textContent = c;
+    btn.onclick = ()=>{document.getElementById("f_category").value = c;};
+    const delBtn = document.createElement("button");
+    delBtn.className = "quick-cat-del";
+    delBtn.innerHTML = "&times;";
+    delBtn.onclick = (e)=>{e.stopPropagation(); deleteCategory(index);};
+    wrap.appendChild(btn); wrap.appendChild(delBtn);
+    bar.appendChild(wrap);
+  });
+}
+function addCustomCategory(){
+  const val = document.getElementById("newCatInput").value.trim();
+  if(!val) return;
+  let arr = getCategories();
+  if(!arr.includes(val)){
+    arr.push(val);
+    saveCategories(arr);
+    showToast("已新增分類："+val);
+  }else showToast("該分類已經存在","warn");
+  document.getElementById("newCatInput").value = "";
+}
+function deleteCategory(index){
+  let arr = getCategories();
+  const name = arr[index];
+  arr.splice(index,1);
+  saveCategories(arr);
+  showToast("已刪除快速分類："+name);
+}
+
+// ========== 收支切換/表單/清單 ==========
+function switchType(type){
+  document.getElementById("currentType").value = type;
+  const header = document.getElementById("recordCardHeader");
+  const saveBtn = document.getElementById("saveBtn");
+  const btnExp = document.getElementById("btnTypeExpense");
+  const btnInc = document.getElementById("btnTypeIncome");
+  if(type==="expense"){
+    header.textContent = "快速新增消費支出";
+    header.classList.remove("income-header");
+    saveBtn.className = "btn btn-burgundy";
+    btnExp.classList.add("active-expense");
+    btnInc.classList.remove("active-income");
+  }else{
+    header.textContent = "快速新增收入紀錄";
+    header.classList.add("income-header");
+    saveBtn.className = "btn btn-income";
+    btnInc.classList.add("active-income");
+    btnExp.classList.remove("active-expense");
+  }
+}
+function clearForm(){
+  document.getElementById("editId").value="";
+  document.getElementById("f_date").value=getTodayStr();
+  document.getElementById("f_time").value=getNowTimeStr();
+  document.getElementById("f_name").value="";
+  document.getElementById("f_category").value="";
+  document.getElementById("f_amount").value="";
+  document.getElementById("f_currency").value="TWD";
+  document.getElementById("f_exrate").value="";
+  document.getElementById("f_note").value="";
+  document.getElementById("f_source").value="手動輸入";
+}
+async function saveRecord(){
+  const id = document.getElementById("editId").value;
+  const type = document.getElementById("currentType").value;
+  let catVal = document.getElementById("f_category").value.trim();
+  if(!catVal) catVal = "其他";
+  const rec = {
+    date: document.getElementById("f_date").value,
+    time: document.getElementById("f_time").value,
+    name: document.getElementById("f_name").value.trim(),
+    category: catVal,
+    amount: parseFloat(document.getElementById("f_amount").value),
+    currency: document.getElementById("f_currency").value.trim(),
+    exchange_rate: document.getElementById("f_exrate").value?parseFloat(document.getElementById("f_exrate").value):null,
+    note: document.getElementById("f_note").value.trim(),
+    source: document.getElementById("f_source").value.trim(),
+    type: type
+  };
+  if(!rec.date || !rec.name || isNaN(rec.amount)){
+    showToast("請檢查日期、項目名稱、金額","error");return;
+  }
+  try{
+    if(id){
+      rec.id = Number(id);
+      await putRecord(rec);
+      showToast("紀錄更新成功");
+    }else{
+      await addRecord(rec);
+      showToast(type==="income"?"新增收入成功 ✔":"新增支出成功 ✔");
+    }
+    clearForm();
+    await loadCloudData();
+  }catch(e){
+    showToast("儲存失敗："+e.message,"error");
+  }
+}
+async function refreshList(){
+  const filterType = document.getElementById("filterType").value;
+  const sortMode = document.getElementById("sortSel").value;
+  let data = localAllRecords;
+  if(filterType !== "all") data = localAllRecords.filter(r=>r.type === filterType);
+  if(sortMode==="date-desc") data.sort((a,b)=>b.date.localeCompare(a.date)||(b.time||"").localeCompare(a.time||""));
+  else if(sortMode==="date-asc") data.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||"").localeCompare(b.time||""));
+  else if(sortMode==="amount-desc") data.sort((a,b)=>(b.amount||0)-(a.amount||0));
+  else if(sortMode==="amount-asc") data.sort((a,b)=>(a.amount||0)-(b.amount||0));
+  const el = document.getElementById("recordList");
+  if(data.length===0){ el.innerHTML='<p class="text-muted">尚無紀錄</p>'; return; }
+  let html = `<div class="table-responsive"><table class="table table-sm table-striped">
+  <thead><tr><th>日期</th><th>項目</th><th>分類</th><th>金額</th><th>幣別</th><th>操作</th></tr></thead><tbody>`;
+  data.forEach(r=>{
+    const isIncome = r.type === "income";
+    const amountClass = isIncome ? "text-income" : "text-burgundy";
+    const tag = isIncome ? '<span class="tag-income">收入</span>' : `<span class="tag-month">${r.date.slice(0,7)}</span>`;
+    html += `<tr>
+      <td>${r.date} ${r.time||""}<br>${tag}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.category)}</td>
+      <td class="${amountClass} fw-bold">${Number(r.amount).toLocaleString()}</td>
+      <td>${escapeHtml(r.currency||"")}</td>
+      <td>
+        <button class="btn btn-sm btn-burgundy-outline edit-btn" data-id="${Number(r.id)}">編輯</button>
+        <button class="btn btn-sm btn-burgundy-outline copy-btn" data-id="${Number(r.id)}">複製</button>
+        <button class="btn btn-sm btn-outline-danger del-btn" data-id="${Number(r.id)}">刪除</button>
+      </td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+  el.innerHTML = html;
+}
+document.addEventListener("DOMContentLoaded", ()=>{
+  document.getElementById("recordListContainer").addEventListener("click", async (e)=>{
+    const target = e.target;
+    const id = target.getAttribute("data-id");
+    if(!id) return;
+    if(target.classList.contains("edit-btn")){ e.stopPropagation(); await loadEdit(Number(id)); }
+    if(target.classList.contains("copy-btn")){ e.stopPropagation(); await cloneRecord(Number(id)); }
+    if(target.classList.contains("del-btn")){ e.stopPropagation(); await handleDelete(Number(id)); }
+  });
+});
+async function handleDelete(id){
+  if(!confirm("確定要刪除這筆紀錄？刪除後無法復原！")) return;
+  try{
+    await deleteRecordById(id);
+    showToast("刪除成功");
+    await loadCloudData();
+  }catch(err){
+    showToast("刪除失敗："+err.message,"error");
+  }
+}
+async function loadEdit(id){
+  const r = localAllRecords.find(x=>x.id===id);
+  if(!r) return;
+  switchType(r.type || "expense");
+  document.getElementById("editId").value = r.id;
+  document.getElementById("f_date").value = r.date || "";
+  document.getElementById("f_time").value = r.time || "";
+  document.getElementById("f_name").value = r.name || "";
+  document.getElementById("f_category").value = r.category==="其他" ? "" : (r.category || "");
+  document.getElementById("f_amount").value = r.amount || "";
+  document.getElementById("f_currency").value = r.currency || "TWD";
+  document.getElementById("f_exrate").value = r.exchange_rate ?? "";
+  document.getElementById("f_note").value = r.note || "";
+  document.getElementById("f_source").value = r.source || "";
+  goTab("#tabRecord");
+}
+async function cloneRecord(id){
+  const r = localAllRecords.find(x=>x.id===id);
+  if(!r) return;
+  switchType(r.type || "expense");
+  document.getElementById("editId").value = "";
+  document.getElementById("f_date").value = getTodayStr();
+  document.getElementById("f_time").value = getNowTimeStr();
+  document.getElementById("f_name").value = r.name || "";
+  document.getElementById("f_category").value = r.category==="其他" ? "" : (r.category || "");
+  document.getElementById("f_amount").value = r.amount || "";
+  document.getElementById("f_currency").value = r.currency || "TWD";
+  document.getElementById("f_exrate").value = r.exchange_rate ?? "";
+  document.getElementById("f_note").value = r.note || "";
+  document.getElementById("f_source").value = "複製紀錄";
+  showToast("已複製舊紀錄，可修改後儲存","warn");
+  goTab("#tabRecord");
+}
+function goTab(targetSel,btnEl){
+  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.remove("active"));
+  if(btnEl) btnEl.classList.add("active");
+  new bootstrap.Tab(document.querySelector(`[data-bs-target="${targetSel}"]`)).show();
+}
+
+// ========== 統計/圖表 ==========
+const burgundyPalette = ["#8B1A33","#A82442","#C03050","#D94564","#E67088","#F098A8","#F7B8C4"];
+const greenPalette = ["#1B7A3E","#27AE60","#2ECC71","#58D68D","#82E0AA","#ABEBC5","#D5F5E3"];
+async function runStat(){
+  const s = document.getElementById("statStart").value;
+  const e = document.getElementById("statEnd").value;
+  const doConvert = document.getElementById("useExchangeConvert").checked;
+  if(!s||!e){showToast("請選取日期區間","warn");return;}
+  const rangeData = localAllRecords.filter(r=>r.date >= s && r.date <= e);
+  let expense=0, income=0;
+  const expenseCat = {}, incomeCat = {};
+  rangeData.forEach(r=>{
+    let val = r.amount;
+    if(doConvert && r.exchange_rate && r.exchange_rate!==0) val = r.amount / r.exchange_rate;
+    if(r.type === "income"){
+      income += val;
+      const c = r.category||"其他";
+      incomeCat[c]=(incomeCat[c]||0)+val;
+    }else{
+      expense += val;
+      const c = r.category||"其他";
+      expenseCat[c]=(expenseCat[c]||0)+val;
+    }
+  });
+  let totalBalance = 0;
+  localAllRecords.forEach(r=>{
+    let val = r.amount;
+    if(doConvert && r.exchange_rate && r.exchange_rate!==0) val = r.amount / r.exchange_rate;
+    totalBalance += (r.type==="income" ? val : -val);
+  });
+  document.getElementById("statExpense").innerText = expense.toLocaleString(undefined,{minimumFractionDigits:2});
+  document.getElementById("statIncome").innerText = income.toLocaleString(undefined,{minimumFractionDigits:2});
+  const remain = income - expense;
+  document.getElementById("statRemain").innerText = remain.toLocaleString(undefined,{minimumFractionDigits:2});
+  document.getElementById("statRemain").className = `fs-4 fw-bold ${remain>=0?"text-income":"text-burgundy"}`;
+  document.getElementById("totalBalance").innerText = totalBalance.toLocaleString(undefined,{minimumFractionDigits:2});
+  renderChart(currentChartType==="expense"?expenseCat:incomeCat);
+}
+function switchChart(type){
+  currentChartType = type;
+  document.getElementById("chartTypeExpense").className = type==="expense"?"btn btn-burgundy":"btn btn-outline-secondary";
+  document.getElementById("chartTypeIncome").className = type==="income"?"btn btn-burgundy":"btn btn-outline-secondary";
+  runStat();
+}
+function renderChart(dataMap){
+  const labels = Object.keys(dataMap);
+  const vals = labels.map(k=>dataMap[k]);
+  if(chartObj) chartObj.destroy();
+  const ctx = document.getElementById("catChart").getContext("2d");
+  chartObj = new Chart(ctx,{
+    type:"pie",
+    data:{labels:labels,datasets:[{data:vals, backgroundColor: currentChartType==="expense" ? burgundyPalette : greenPalette}]},
+    options:{responsive:true,maintainAspectRatio:false}
+  });
+}
+
+// ========== 匯出/匯入 ==========
+async function exportLedgerCsv(){
+  const lines = [];
+  lines.push(EXPORT_FIELDS.join(","));
+  localAllRecords.forEach(r=>{
+    const row = EXPORT_FIELDS.map(f=>{
+      let v = r[f] ?? r[f === "exchangeRate" ? "exchange_rate" : f];
+      if(v===null||v===undefined) v="";
+      return `"${String(v).replace(/"/g,'""')}"`;
+    });
+    lines.push(row.join(","));
+  });
+  const csvText = "\ufeff" + lines.join("\n");
+  const blob = new Blob([csvText],{type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url; a.download = `LocalLedger_Backup_${getTodayStr()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("CSV備份檔已下載 ✔");
+}
+function decodeCsvBuffer(buf){
+  try{
+    let text = new TextDecoder('utf-8', { fatal: true }).decode(buf);
+    if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    return text;
+  }catch(e){
+    return new TextDecoder('big5').decode(buf);
+  }
+}
+document.getElementById("importFile").addEventListener("change",async ev=>{
+  const file = ev.target.files[0];
+  if(!file){ resetImportArea(); return; }
+  document.getElementById("importFileName").textContent = file.name;
+  document.getElementById("importFileInfo").classList.remove("d-none");
+  try{
+    const buf = await file.arrayBuffer();
+    let sheet;
+    if(file.name.toLowerCase().endsWith(".csv")){
+      const text = decodeCsvBuffer(buf);
+      sheet = XLSX.utils.csv_to_sheet(text);
+    }else{
+      const wb = XLSX.read(buf, {type:"array", cellDates: true});
+      sheet = wb.Sheets[wb.SheetNames[0]];
+    }
+    const allRows = XLSX.utils.sheet_to_json(sheet, {header:0, defval:"", blankrows:false});
+    if(!allRows || allRows.length<1){ showToast("檔案沒有資料","error"); resetImportArea(); return; }
+    const headerRow = allRows[0].map(h=>String(h||"").trim());
+    importRawRows = allRows.slice(1).filter(row=>row.some(cell=>cell!=="" && cell!=null));
+    buildImportMapUI(headerRow);
+    document.getElementById("doImportBtn").classList.remove("d-none");
+    showToast(`讀取完成，共 ${importRawRows.length} 筆`);
+  }catch(e){
+    showToast("解析失敗："+e.message,"error");
+    resetImportArea();
+  }
+});
+function resetImportArea(){
+  importRawRows = null;
+  document.getElementById("importFileInfo").classList.add("d-none");
+  document.getElementById("importMapUi").innerHTML = "";
+  document.getElementById("doImportBtn").classList.add("d-none");
+}
+function buildImportMapUI(headerRow){
+  const ui = document.getElementById("importMapUi");
+  let html = `<p class="mb-2"><strong>欄位對應設定</strong></p>`;
+  EXPORT_FIELDS.forEach(std=>{
+    html += `<div class="row mb-1 align-items-center">
+      <div class="col-md-3"><small>${std}</small></div>
+      <div class="col-md-9"><select class="form-select form-select-sm import-map-sel" data-std="${std}">
+      <option value="">--不對應--</option>`;
+    headerRow.forEach((h,idx)=>{
+      const selected = String(h).trim().toLowerCase() === std.toLowerCase() ? "selected" : "";
+      html += `<option value="${idx}" ${selected}>第${idx+1}欄：${escapeHtml(String(h))}</option>`;
+    });
+    html += `</select></div></div>`;
+  });
+  ui.innerHTML = html;
+}
+function confirmImport(){
+  if(!importRawRows){ showToast("請先選檔","warn"); return; }
+  if(confirm(`即將匯入 ${importRawRows.length} 筆資料，確定執行？`)) doImportMapped();
+}
+async function doImportMapped(){
+  const mapSel = document.querySelectorAll(".import-map-sel");
+  const fieldMap = {};
+  mapSel.forEach(s=>{
+    const std = s.dataset.std;
+    const colIdx = s.value===""?null:Number(s.value);
+    if(colIdx!==null) fieldMap[std] = colIdx;
+  });
+  let ok=0, skip=0;
+  for(let i=0;i<importRawRows.length;i++){
+    const rowArr = importRawRows[i];
+    const rec = {};
+    STANDARD_FIELDS.forEach(f=>rec[f]=null);
+    rec.type = "expense";
+    Object.entries(fieldMap).forEach(([std,col])=>{
+      if(rowArr[col]!==undefined) rec[std] = rowArr[col];
+    });
+    const typeRaw = String(rec.type||"").trim().toLowerCase();
+    rec.type = (typeRaw === "收入" || typeRaw === "income") ? "income" : "expense";
+    const parsedDate = parseDateValue(rec.date);
+    if(!parsedDate){ skip++; continue; }
+    rec.date = parsedDate;
+    if(rec.amount === null || rec.amount === ""){ skip++; continue; }
+    rec.amount = Number(rec.amount);
+    if(isNaN(rec.amount)){ skip++; continue; }
+    if(!rec.category) rec.category = "其他";
+    rec.source = "匯入檔案";
+    try{
+      await addRecord(rec);
+      ok++;
+    }catch(e){ skip++; }
+  }
+  showToast(`匯入完成：成功${ok}筆，略過${skip}筆`);
+  resetImportArea();
+  await loadCloudData();
+}
+
+// ========== 初始化 ==========
+window.addEventListener("load", async ()=>{
+  if(!supabase){
+    showToast("後台服務初始化失敗，請重新整理頁面","error");
+    return;
+  }
+  try{
+    const {data} = await supabase.auth.getSession();
+    if(data.session){
+      currentUser = data.session.user;
+      enterApp();
+    }
+    supabase.auth.onAuthStateChange((event, session)=>{
+      if(session && !currentUser){
+        currentUser = session.user;
+        enterApp();
+      }
+    });
+  }catch(e){
+    showToast("登入狀態讀取失敗："+e.message,"error");
+  }
+});
+</script>
+</body>
+</html>

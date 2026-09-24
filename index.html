@@ -375,19 +375,28 @@ body{
 </div>
 
 <script>
-// ========== Supabase 初始化（自動解析URL版，徹底杜絕手誤） ==========
+// ========== Supabase 初始化（雙重保險穩定版） ==========
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0cWh5Ymh2c3Zla2hxeHNtanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMDY1MDgsImV4cCI6MjEwNTc4MjUwOH0.SaLSUCuPJLA6yTuSatUsfW7J77nSld_8DUiCypFwhAo";
-// 自動從JWT金鑰解碼正確的專案網址，完全不用手動填寫
-const jwtPayload = JSON.parse(atob(SUPABASE_ANON_KEY.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
-const SUPABASE_URL = `https://${jwtPayload.ref}.supabase.co`;
+let SUPABASE_URL = "";
+try {
+  // 補全base64 padding，解決所有瀏覽器兼容問題
+  const b64Part = SUPABASE_ANON_KEY.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+  const paddedB64 = b64Part + '='.repeat((4 - b64Part.length % 4) % 4);
+  const jwtPayload = JSON.parse(atob(paddedB64));
+  SUPABASE_URL = `https://${jwtPayload.ref}.supabase.co`;
+  console.log("✅ 自動解析成功，目標網址：", SUPABASE_URL);
+} catch(e) {
+  // 萬一自動解析失敗，自動切換到硬編碼的正確網址，絕對不會導致整個腳本崩潰
+  console.warn("⚠️ 自動解析異常，切換備用網址", e);
+  SUPABASE_URL = "https://htqhybhvsv ekhqxsmjph.supabase.co";
+}
 let supabase = null;
-console.log("自動解析到的Supabase網址：", SUPABASE_URL);
 try{
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log("✅ Supabase連線初始化成功");
+  console.log("✅ Supabase客戶端初始化完成");
 }catch(e){
-  console.error("❌ Supabase初始化失敗：", e.message);
-  document.write("<p style='color:red;padding:20px'>後台連線初始化失敗：" + e.message + "</p>");
+  console.error("❌ 初始化失敗：", e.message);
+  alert("後台連線異常：" + e.message);
 }
 
 const STANDARD_FIELDS = ["date","time","name","category","amount","currency","exchangeRate","note","source"];

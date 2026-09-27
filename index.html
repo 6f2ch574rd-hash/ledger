@@ -3,42 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LocalLedger</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<title>LocalLedger 雲端版</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 <style>
-body{background:#fff;padding-bottom:100px;font-family:sans-serif;}
+body{background:#fff;padding-bottom:100px;font-family:sans-serif;margin:0;}
 .wrap{max-width:800px;margin:0 auto;padding:0 16px;}
 .toast{position:fixed;top:15px;right:15px;background:#28a745;color:#fff;padding:10px 16px;border-radius:8px;z-index:9999;}
+.toast.err{background:#dc3545;}.toast.warn{background:#fd7e14;}
 .nav{position:fixed;bottom:12px;left:12px;right:12px;background:#fff;border-radius:16px;box-shadow:0 -2px 16px rgba(0,0,0,0.15);display:flex;z-index:999;}
 .nav button{flex:1;border:none;background:none;padding:18px 4px;font-size:15px;color:#888;}
 .nav button.active{color:#9E203E;font-weight:bold;}
 .page{display:none;}.page.active{display:block;}
 .btn{border:none;border-radius:8px;padding:12px 18px;cursor:pointer;font-size:15px;}
-.btn-wine{background:#9E203E;color:#fff;}
-.btn-ghost{background:#fff;border:1px solid #9E203E;color:#9E203E;}
+.btn-wine{background:#9E203E;color:#fff;}.btn-green{background:#27AE60;color:#fff;}
+.btn-gray{background:#f5f5f5;color:#333;}.btn-ghost{background:#fff;border:1px solid #9E203E;color:#9E203E;}
 .card{border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin:16px 0;overflow:hidden;}
 .card-head{background:#9E203E;color:#fff;padding:12px 16px;font-weight:500;}
+.card-head.green-head{background:#27AE60;}
 .card-body{padding:16px;}
 input,select{width:100%;padding:10px;margin:4px 0 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;}
 .tag{font-size:12px;padding:2px 6px;border-radius:4px;background:#F7E8EB;color:#8B1A33;}
+.tag.green{background:#E8F8F0;color:#1B7A3E;}
 table{width:100%;border-collapse:collapse;}td,th{padding:8px;border-bottom:1px solid #eee;}
+.quick-tag{display:inline-flex;align-items:center;border:1px solid #9E203E;border-radius:6px;margin:3px;overflow:hidden;}
+.quick-tag button{border:none;background:#fff;color:#9E203E;padding:4px 10px;cursor:pointer;}
+.quick-tag .del{border-left:1px solid #9E203E;padding:4px 8px;background:#F7E8EB;}
+.quick-range-btn{flex:1;padding:10px;border:1px solid #ddd;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;}
+.quick-range-btn.active{background:#9E203E;color:#fff;border-color:#9E203E;}
 </style>
 </head>
 <body>
 <div class="wrap">
-<h2 style="color:#9E203E">📒 LocalLedger</h2>
+<h2 style="color:#9E203E">📒 LocalLedger <span id="syncDot" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#28a745;margin-left:6px;cursor:pointer;" onclick="showSyncStatus()"></span></h2>
 
 <div class="page active" id="pageRecord">
-<div class="card">
-<div class="card-head" id="cardTitle">記支出</div>
-<div class="card-body">
+<div class="card"><div class="card-head" id="cardTitle">記支出</div><div class="card-body">
 <div style="display:flex;border:1px solid #eee;border-radius:10px;overflow:hidden;margin-bottom:12px;">
 <button class="btn btn-wine" id="btnExp" style="flex:1;border-radius:0;" onclick="setType('expense')">💸 支出</button>
-<button class="btn" style="flex:1;border-radius:0;background:#f5f5f5;" onclick="setType('income')">💰 收入</button>
+<button class="btn btn-gray" id="btnInc" style="flex:1;border-radius:0;" onclick="setType('income')">💰 收入</button>
+</div>
+<label>常用分類（點選快速填入，×刪除）</label>
+<div id="quickCatBar" style="margin-bottom:12px;"></div>
+<div style="display:flex;gap:8px;margin-bottom:16px;">
+<input id="newCatInput" placeholder="新分類名稱" style="flex:1;margin:0;">
+<button class="btn btn-wine" onclick="addNewCat()">＋新增</button>
 </div>
 <label>日期</label><input type="date" id="fDate">
 <label>名稱 *</label><input id="fName" placeholder="例：午餐、薪水">
@@ -46,51 +55,59 @@ table{width:100%;border-collapse:collapse;}td,th{padding:8px;border-bottom:1px s
 <label>分類（留空自動歸其他）</label><input id="fCat">
 <label>備註（選填）</label><input id="fNote">
 <div style="display:flex;gap:10px;margin-top:12px;">
-<button class="btn btn-wine" onclick="doSave()">💾 儲存</button>
-<button class="btn btn-ghost" onclick="doClear()">🔄 清空</button>
+<button class="btn btn-wine" id="saveBtn" onclick="doSave()">💾 儲存紀錄</button>
+<button class="btn btn-ghost" onclick="doClear()">🔄 清空表單</button>
 </div>
-</div>
-</div>
+</div></div>
 </div>
 
 <div class="page" id="pageList">
-<div class="card">
-<div class="card-head">收支清單</div>
-<div class="card-body">
+<div class="card"><div class="card-head">收支清單</div><div class="card-body">
 <select id="filterType" onchange="renderList()">
 <option value="all">全部</option><option value="expense">僅支出</option><option value="income">僅收入</option>
 </select>
 <div id="listBox"></div>
-</div>
-</div>
+</div></div>
 </div>
 
 <div class="page" id="pageStat">
-<div class="card">
-<div class="card-head">統計</div>
-<div class="card-body">
-<label>開始日期</label><input type="date" id="statStart">
-<label>結束日期</label><input type="date" id="statEnd">
-<div style="display:flex;gap:10px;margin:12px 0;">
-<div style="flex:1;padding:12px;background:#F7E8EB;border-radius:8px;text-align:center;">支出<br><strong id="stExp">0</strong></div>
-<div style="flex:1;padding:12px;background:#E8F8F0;border-radius:8px;text-align:center;">收入<br><strong id="stInc">0</strong></div>
+<div class="card"><div class="card-head">統計</div><div class="card-body">
+<div style="display:flex;gap:6px;margin-bottom:12px;">
+<button class="quick-range-btn" onclick="setRange('today',this)">今天</button>
+<button class="quick-range-btn" onclick="setRange('week',this)">本週</button>
+<button class="quick-range-btn active" onclick="setRange('month',this)">本月</button>
+<button class="quick-range-btn" onclick="setRange('year',this)">今年</button>
+<button class="quick-range-btn" onclick="setRange('all',this)">全部</button>
 </div>
-<p>累計餘額：<strong id="stTotal">0</strong></p>
+<p style="font-size:13px;color:#666;">或自訂區間：</p>
+<div style="display:flex;gap:10px;">
+<input type="date" id="statStart" style="flex:1;margin:0;">
+<input type="date" id="statEnd" style="flex:1;margin:0;">
 </div>
+<div style="display:flex;gap:10px;margin:16px 0;">
+<div style="flex:1;padding:16px;background:#F7E8EB;border-radius:12px;text-align:center;">💸 總支出<br><strong id="stExp" style="font-size:22px;color:#9E203E;">0</strong></div>
+<div style="flex:1;padding:16px;background:#E8F8F0;border-radius:12px;text-align:center;">💰 總收入<br><strong id="stInc" style="font-size:22px;color:#27AE60;">0</strong></div>
 </div>
+<p style="font-size:18px;text-align:center;">總餘額：<strong id="stTotal" style="font-size:22px;color:#2c5aa0;">0</strong></p>
+<h4 style="margin:20px 0 10px;color:#9E203E;">🎨 分類占比
+<span style="float:right;">
+<button id="pieTypeExp" style="background:#9E203E;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:13px;" onclick="switchPieType('expense')">支出</button>
+<button id="pieTypeInc" style="background:#f5f5f5;color:#333;border:none;border-radius:6px;padding:4px 10px;font-size:13px;margin-left:4px;" onclick="switchPieType('income')">收入</button>
+</span></h4>
+<div style="max-height:320px;"><canvas id="pieChart"></canvas></div>
+</div></div>
 </div>
 
 <div class="page" id="pageBackup">
-<div class="card">
-<div class="card-head">備份</div>
-<div class="card-body">
-<button class="btn btn-wine" style="width:100%;margin-bottom:12px;" onclick="doExport()">📤 匯出CSV</button>
-<label>選擇檔案匯入</label><input type="file" id="impFile">
-<button class="btn btn-wine" style="width:100%;margin-top:12px;display:none;" id="btnImp" onclick="doImport()">✅ 確認匯入</button>
+<div class="card"><div class="card-head">備份</div><div class="card-body">
+<button class="btn btn-wine" style="width:100%;margin-bottom:16px;" onclick="doExport()">📤 匯出CSV備份</button>
+<label>選擇CSV檔案</label>
+<input type="file" id="impFile" accept=".csv">
+<div id="impStatus" style="font-size:14px;color:#666;margin:8px 0;"></div>
+<button class="btn btn-wine" id="btnReadImp" style="width:100%;margin-top:8px;display:none;" onclick="readImportFile()">📖 開始讀取檔案</button>
+<button class="btn btn-green" id="btnDoImp" style="width:100%;margin-top:8px;display:none;" onclick="doImport()">✅ 確認匯入</button>
+</div></div>
 </div>
-</div>
-</div>
-
 </div>
 
 <div class="nav">
@@ -101,20 +118,32 @@ table{width:100%;border-collapse:collapse;}td,th{padding:8px;border-bottom:1px s
 </div>
 
 <script>
-// ========== 所有函數全局定義，打開就存在，絕對不會「沒反應」 ==========
+const SUPABASE_URL = "https://htqhybhvsvekhqxsmjph.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0cWh5Ymh2c3Zla2hxeHNtanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMDY1MDgsImV4cCI6MjEwNTc4MjUwOH0.SaLSUCuPJLA6yTuSatUsfW7J77nSld_8DUiCypFwhAo";
+const FIXED_UID = "my-personal-ledger";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let currentType = "expense";
 let allData = [];
-let sb = null;
-let importRows = null;
+let quickCats = JSON.parse(localStorage.getItem("localLedgerCats") || '["餐飲","交通","購物","娛樂","居家","醫療","薪水"]');
+let editingId = null;
+let pendingRows = null;
+let pieShowType = "expense";
+let pieChart = null;
+const chartPalette = ["#9E203E","#E8A0A8","#E67E5A","#E8C56A","#4A8B6F","#6A8FBF","#9B7FBF","#D9B38C"];
 
-function toast(msg){
+function toast(msg, color="#28a745"){
   const t = document.createElement("div");
-  t.className = "toast";
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(),2000);
+  t.className = "toast"; t.style.background = color; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2200);
 }
 function today(){ return new Date().toISOString().slice(0,10); }
+function saveCats(){ localStorage.setItem("localLedgerCats", JSON.stringify(quickCats)); renderCats(); }
+function showSyncStatus(){
+  const dot = document.getElementById("syncDot");
+  if(dot.style.background === "#28a745") toast("目前狀態：雲端同步正常", "#17a2b8");
+  else toast("目前狀態：雲端連線異常，請稍後再試", "#dc3545");
+}
 
 function goPage(pid, btnEl){
   document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
@@ -125,155 +154,222 @@ function goPage(pid, btnEl){
 }
 function setType(type){
   currentType = type;
-  const btnExp = document.getElementById("btnExp");
-  const cardTitle = document.getElementById("cardTitle");
-  if(type === "expense"){
-    cardTitle.textContent = "記支出";
-    btnExp.className = "btn btn-wine";
+  const btnExp = document.getElementById("btnExp"), btnInc = document.getElementById("btnInc");
+  const cardTitle = document.getElementById("cardTitle"), saveBtn = document.getElementById("saveBtn");
+  if(type==="expense"){
+    cardTitle.textContent = "記支出"; cardTitle.classList.remove("green-head");
+    btnExp.className = "btn btn-wine"; btnInc.className = "btn btn-gray"; saveBtn.className = "btn btn-wine";
     toast("切換為支出模式");
   }else{
-    cardTitle.textContent = "記收入";
-    btnExp.className = "btn";
+    cardTitle.textContent = "記收入"; cardTitle.classList.add("green-head");
+    btnInc.className = "btn btn-green"; btnExp.className = "btn btn-gray"; saveBtn.className = "btn btn-green";
     toast("切換為收入模式");
   }
 }
+function renderCats(){
+  const bar = document.getElementById("quickCatBar"); bar.innerHTML = "";
+  quickCats.forEach((cat, idx)=>{
+    const wrap = document.createElement("span"); wrap.className = "quick-tag";
+    const btn = document.createElement("button"); btn.textContent = cat;
+    btn.onclick = ()=>{ document.getElementById("fCat").value = cat; toast("已填入分類："+cat); };
+    const del = document.createElement("button"); del.className = "del"; del.textContent = "×";
+    del.onclick = (e)=>{ e.stopPropagation(); quickCats.splice(idx,1); saveCats(); toast("已刪除分類："+cat,"#fd7e14"); };
+    wrap.appendChild(btn); wrap.appendChild(del); bar.appendChild(wrap);
+  });
+}
+function addNewCat(){
+  const val = document.getElementById("newCatInput").value.trim();
+  if(!val){toast("請輸入分類名稱","#fd7e14");return;}
+  if(quickCats.includes(val)){toast("分類已存在","#fd7e14");return;}
+  quickCats.push(val); saveCats(); document.getElementById("newCatInput").value=""; toast("✅ 新增分類："+val);
+}
 function doClear(){
+  editingId = null;
   document.getElementById("fDate").value = today();
-  document.getElementById("fName").value = "";
-  document.getElementById("fAmount").value = "";
-  document.getElementById("fCat").value = "";
-  document.getElementById("fNote").value = "";
+  document.getElementById("fName").value = ""; document.getElementById("fAmount").value = "";
+  document.getElementById("fCat").value = ""; document.getElementById("fNote").value = "";
   toast("表單已清空");
 }
 async function doSave(){
-  toast("正在儲存...");
   const rec = {
-    user_id: "my-ledger",
-    date: document.getElementById("fDate").value,
+    user_id: FIXED_UID, date: document.getElementById("fDate").value,
     name: document.getElementById("fName").value.trim(),
     category: document.getElementById("fCat").value.trim() || "其他",
     amount: Number(document.getElementById("fAmount").value),
-    type: currentType,
-    note: document.getElementById("fNote").value.trim()
+    type: currentType, note: document.getElementById("fNote").value.trim()
   };
-  if(!rec.date){toast("請選日期");return;}
-  if(!rec.name){toast("請填名稱");return;}
-  if(isNaN(rec.amount)){toast("請填金額");return;}
+  if(!rec.date){toast("請選日期","#dc3545");return;}
+  if(!rec.name){toast("請填名稱","#dc3545");return;}
+  if(isNaN(rec.amount)){toast("請填正確金額","#dc3545");return;}
   try{
-    await sb.from("transactions").insert(rec);
-    toast(currentType === "income" ? "✅ 收入已入帳" : "✅ 支出已記錄");
-    doClear();
-    await loadData();
-  }catch(e){
-    toast("❌ 儲存失敗："+e.message);
-  }
+    if(editingId){
+      await sb.from("transactions").update(rec).eq("id", editingId);
+      toast("✅ 記錄已更新"); editingId = null;
+    }else{
+      await sb.from("transactions").insert(rec);
+      toast(currentType==="income"?"✅ 收入已入帳":"✅ 支出已記錄");
+    }
+    doClear(); await loadData();
+  }catch(e){ toast("❌ 儲存失敗："+e.message, "#dc3545"); }
 }
 async function loadData(){
-  toast("同步雲端...");
   try{
-    const {data} = await sb.from("transactions").select("*").order("date",{ascending:false});
+    const {data} = await sb.from("transactions").select("*").eq("user_id", FIXED_UID).order("date",{ascending:false});
     allData = data || [];
-    renderList();
-    renderStat();
-    toast("同步完成，共"+allData.length+"筆");
+    document.getElementById("syncDot").style.background = "#28a745";
+    renderList(); renderStat();
   }catch(e){
-    toast("⚠️ 雲端連線失敗，本地仍可操作");
+    document.getElementById("syncDot").style.background = "#dc3545";
+    toast("⚠️ 雲端連線失敗","#fd7e14");
   }
 }
 function renderList(){
   const filter = document.getElementById("filterType").value;
   let data = [...allData];
-  if(filter !== "all") data = data.filter(r=>r.type===filter);
+  if(filter!=="all") data = data.filter(r=>r.type===filter);
   const box = document.getElementById("listBox");
-  if(data.length===0){box.innerHTML="<p style='color:#999'>尚無記錄</p>";return;}
+  if(data.length===0){box.innerHTML="<p style='color:#888'>尚無記錄</p>";return;}
   let html = "<table><tr><th>日期</th><th>名稱</th><th>金額</th><th></th></tr>";
   data.forEach(r=>{
-    html += `<tr>
-    <td>${r.date}</td>
-    <td>${r.name}<br><span class="tag">${r.category}</span></td>
-    <td>${r.amount}</td>
-    <td><button style="color:red;border:none;background:none;cursor:pointer;" onclick="doDel(${r.id})">刪除</button></td>
-    </tr>`;
+    const color = r.type==="income"?"#27AE60":"#9E203E";
+    html += `<tr><td>${r.date}</td><td>${r.name}<br><span class="tag ${r.type==='income'?'green':''}">${r.category}</span></td>
+    <td style="color:${color};font-weight:bold;">${r.amount}</td>
+    <td><button style="color:#9E203E;border:none;background:none;cursor:pointer;margin-right:6px;" onclick="editRecord(${r.id})">編輯</button>
+    <button style="color:#27AE60;border:none;background:none;cursor:pointer;margin-right:6px;" onclick="cloneRecord(${r.id})">複製</button>
+    <button style="color:red;border:none;background:none;cursor:pointer;" onclick="doDel(${r.id})">刪除</button></td></tr>`;
   });
-  html += "</table>";
-  box.innerHTML = html;
+  box.innerHTML = html + "</table>";
+}
+function editRecord(id){
+  const rec = allData.find(r=>r.id===id); if(!rec) return;
+  editingId = id; setType(rec.type);
+  document.getElementById("fDate").value = rec.date; document.getElementById("fName").value = rec.name;
+  document.getElementById("fAmount").value = rec.amount;
+  document.getElementById("fCat").value = rec.category==="其他"?"":rec.category;
+  document.getElementById("fNote").value = rec.note||"";
+  toast("已載入記錄到編輯模式");
+  goPage("pageRecord", document.querySelectorAll(".nav button")[0]);
+}
+function cloneRecord(id){
+  const rec = allData.find(r=>r.id===id); if(!rec) return;
+  editingId = null; setType(rec.type);
+  document.getElementById("fDate").value = today(); document.getElementById("fName").value = rec.name;
+  document.getElementById("fAmount").value = rec.amount;
+  document.getElementById("fCat").value = rec.category==="其他"?"":rec.category;
+  document.getElementById("fNote").value = rec.note||"";
+  toast("已複製舊記錄，改完直接儲存");
+  goPage("pageRecord", document.querySelectorAll(".nav button")[0]);
 }
 async function doDel(id){
-  if(!confirm("確定刪除？")) return;
-  toast("刪除中...");
   try{
-    await sb.from("transactions").delete().eq("id",id);
-    toast("已刪除");
+    await sb.from("transactions").delete().eq("id", id);
+    toast("✅ 記錄已刪除");
     await loadData();
-  }catch(e){toast("刪除失敗");}
+  }catch(e){ toast("❌ 刪除失敗","#dc3545"); }
+}
+function setRange(type, btnEl){
+  document.querySelectorAll(".quick-range-btn").forEach(b=>b.classList.remove("active"));
+  btnEl.classList.add("active");
+  const now = new Date(); let s,e;
+  if(type==="today"){s=e=today();}
+  else if(type==="week"){const d=now.getDay()||7;const st=new Date(now);st.setDate(now.getDate()-d+1);s=st.toISOString().slice(0,10);e=today();}
+  else if(type==="month"){s=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);e=today();}
+  else if(type==="year"){s=new Date(now.getFullYear(),0,1).toISOString().slice(0,10);e=today();}
+  else {s="2000-01-01";e=today();}
+  document.getElementById("statStart").value=s; document.getElementById("statEnd").value=e;
+  toast("已切換統計範圍"); renderStat();
+}
+function switchPieType(type){
+  pieShowType = type;
+  const btnExp = document.getElementById("pieTypeExp"), btnInc = document.getElementById("pieTypeInc");
+  if(type==="expense"){
+    btnExp.style.background="#9E203E";btnExp.style.color="#fff";
+    btnInc.style.background="#f5f5f5";btnInc.style.color="#333";
+  }else{
+    btnInc.style.background="#27AE60";btnInc.style.color="#fff";
+    btnExp.style.background="#f5f5f5";btnExp.style.color="#333";
+  }
+  renderStat();
 }
 function renderStat(){
-  const s = document.getElementById("statStart").value;
-  const e = document.getElementById("statEnd").value;
-  let exp=0,inc=0;
+  const s = document.getElementById("statStart").value, e = document.getElementById("statEnd").value;
+  let exp=0,inc=0; const expCat={}, incCat={};
   allData.forEach(r=>{
-    if(r.date < s || r.date > e) return;
-    if(r.type==="expense") exp += r.amount; else inc += r.amount;
+    if(r.date<s||r.date>e) return;
+    if(r.type==="expense"){exp+=r.amount; expCat[r.category]=(expCat[r.category]||0)+r.amount;}
+    else{inc+=r.amount; incCat[r.category]=(incCat[r.category]||0)+r.amount;}
   });
-  document.getElementById("stExp").textContent = exp.toLocaleString();
-  document.getElementById("stInc").textContent = inc.toLocaleString();
-  let total=0; allData.forEach(r=> total += r.type==="income"?r.amount:-r.amount);
-  document.getElementById("stTotal").textContent = total.toLocaleString();
+  document.getElementById("stExp").textContent=exp.toLocaleString();
+  document.getElementById("stInc").textContent=inc.toLocaleString();
+  document.getElementById("stTotal").textContent=(inc-exp).toLocaleString();
+  const currentData = pieShowType==="expense"?expCat:incCat;
+  if(pieChart) pieChart.destroy();
+  const ctx = document.getElementById("pieChart").getContext("2d");
+  pieChart = new Chart(ctx,{
+    type:"doughnut",
+    data:{labels:Object.keys(currentData),datasets:[{data:Object.values(currentData),backgroundColor:chartPalette,borderWidth:3,borderColor:"#fff",hoverOffset:12}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"55%",plugins:{legend:{position:"bottom",labels:{padding:12,font:{size:13}}},tooltip:{callbacks:{label:c=>{const total=c.dataset.data.reduce((a,b)=>a+b,0);const pct=((c.raw/total)*100).toFixed(1);return ` ${c.label}: NT$${c.raw.toLocaleString()} (${pct}%)`;}}}}},
+    plugins:[{id:"pct",afterDraw:c=>{const ctx=c.ctx;c.data.datasets[0].data.forEach((v,i)=>{const total=c.data.datasets[0].data.reduce((a,b)=>a+b,0);const pct=((v/total)*100).toFixed(0);if(pct<5)return;const pos=c.getDatasetMeta(0).data[i].tooltipPosition();ctx.fillStyle="#fff";ctx.font="bold 13px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(pct+"%",pos.x,pos.y);});}}]
+  });
 }
 function doExport(){
-  toast("產生備份檔...");
+  toast("正在產生備份...","#fd7e14");
   let csv = "date,name,category,amount,type,note\n";
-  allData.forEach(r=> csv += `${r.date},"${r.name}",${r.category},${r.amount},${r.type},"${r.note||""}"\n`);
+  allData.forEach(r=>csv+=`${r.date},"${r.name}",${r.category},${r.amount},${r.type},"${r.note||""}"\n`);
   const blob = new Blob(["\ufeff"+csv]);
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `備份_${today()}.csv`;
-  a.click();
+  const a = document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download = `備份_${today()}.csv`; a.click();
+  localStorage.setItem("lastBackupTime", Date.now());
   toast("✅ 備份已下載");
 }
-document.getElementById("impFile").addEventListener("change", async e=>{
-  const f = e.target.files[0];
-  if(!f) return;
-  toast("讀取檔案...");
-  const buf = await f.arrayBuffer();
-  const wb = XLSX.read(buf, {type:"array"});
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, {header:0, defval:""});
-  importRows = rows.slice(1);
-  toast(`讀到 ${importRows.length} 筆，點確認匯入`);
-  document.getElementById("btnImp").style.display = "block";
+document.getElementById("impFile").addEventListener("change", function(e){
+  if(!e.target.files[0]) return;
+  document.getElementById("impStatus").textContent = "已選擇：" + e.target.files[0].name;
+  document.getElementById("btnReadImp").style.display = "block";
+  toast("選好檔案了，點開始讀取","#17a2b8");
 });
+function readImportFile(){
+  const f = document.getElementById("impFile").files[0];
+  if(!f){toast("請先選檔案","#fd7e14");return;}
+  toast("正在讀取檔案...","#fd7e14");
+  const reader = new FileReader();
+  reader.onload = async function(ev){
+    let text = ev.target.result;
+    if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    const lines = text.split(/\r?\n/).filter(l=>l.trim()!=="");
+    pendingRows = lines.slice(1).map(l=>l.split(","));
+    document.getElementById("impStatus").textContent = `讀到 ${pendingRows.length} 筆，點確認匯入`;
+    document.getElementById("btnDoImp").style.display = "block";
+    toast(`✅ 讀取成功，共 ${pendingRows.length} 筆`);
+  };
+  reader.readAsText(f,"utf-8");
+}
 async function doImport(){
-  toast("匯入中...");
-  let ok=0;
-  for(const row of importRows){
+  if(!pendingRows){toast("請先讀取檔案","#fd7e14");return;}
+  toast("開始匯入...","#fd7e14");
+  let ok=0,skip=0;
+  for(const cols of pendingRows){
+    if(cols.length<4){skip++;continue;}
     try{
       await sb.from("transactions").insert({
-        user_id:"my-ledger", date:row[0], name:row[1], category:row[2]||"其他", amount:Number(row[3]), type:row[4]||"expense", note:row[5]||""
+        user_id: FIXED_UID, date: cols[0], name: cols[1].replace(/"/g,""),
+        category: cols[2]||"其他", amount: Number(cols[3]), type: cols[4]||"expense", note: cols[5]||""
       });
       ok++;
-    }catch(e){}
+    }catch(e){skip++;}
   }
-  toast(`匯入完成：成功${ok}筆`);
-  await loadData();
+  toast(`✅ 匯入完成：成功${ok}筆，略過${skip}筆`);
+  document.getElementById("impFile").value=""; document.getElementById("impStatus").textContent="";
+  document.getElementById("btnReadImp").style.display="none"; document.getElementById("btnDoImp").style.display="none";
+  pendingRows=null; await loadData();
 }
 
-// ========== 頁面打開後初始化 ==========
-window.onload = function(){
-  toast("程式啟動");
-  try{
-    sb = window.supabase.createClient(
-      "https://htqhybhvsvekhqxsmjph.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0cWh5Ymh2c3Zla2hxeHNtanBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMDY1MDgsImV4cCI6MjEwNTc4MjUwOH0.SaLSUCuPJLA6yTuSatUsfW7J77nSld_8DUiCypFwhAo"
-    );
-    document.getElementById("fDate").value = today();
-    document.getElementById("statStart").value = new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10);
-    document.getElementById("statEnd").value = today();
-    loadData();
-    toast("🎉 全部按鈕已就緒");
-  }catch(e){
-    toast("⚠️ 雲端連線失敗，但所有按鈕仍可正常點擊");
-  }
+window.onload = async function(){
+  toast("雲端版啟動中...","#17a2b8");
+  document.getElementById("fDate").value = today();
+  renderCats();
+  await loadData();
+  toast("🎉 歡迎回來，記帳本已就緒");
 };
 </script>
 </body>

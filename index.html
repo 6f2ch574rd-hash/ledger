@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="記帳本">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='32' fill='%239E203E'/><text x='90' y='120' font-size='80' text-anchor='middle' fill='white'>📒</text></svg>">
 <title>LocalLedger 雲端版</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
@@ -367,6 +372,10 @@ async function doImport(){
   document.getElementById("impFile").value=""; document.getElementById("impStatus").textContent="";
   document.getElementById("btnReadImp").style.display="none"; document.getElementById("btnDoImp").style.display="none";
   pendingRows=null; await loadData();
+  const {count, error: cErr} = await sb.from("transactions").select("*", {count: "exact"});
+  if(cErr) toast("⚠️ 讀取雲端筆數失敗："+cErr.message, "#dc3545");
+  else toast(`📊 雲端目前總共存了 ${count} 筆記錄`, "#17a2b8");
+  renderList();
 }
 
 window.onload = async function(){
@@ -375,6 +384,13 @@ window.onload = async function(){
   renderCats();
   await loadData();
   toast("🎉 歡迎回來，記帳本已就緒");
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").then(() => {
+        toast("✅ 已開啟離線本地儲存功能", "#17a2b8");
+      }).catch(() => {});
+    });
+  }
 };
 </script>
 </body>

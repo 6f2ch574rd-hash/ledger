@@ -1,0 +1,16 @@
+{
+  "name": "LocalLedger 雲端記帳本",
+  "short_name": "記帳本",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#9E203E",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='32' fill='%239E203E'/><text x='90' y='120' font-size='80' text-anchor='middle' fill='white'>📒</text></svg>",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

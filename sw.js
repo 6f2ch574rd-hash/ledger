@@ -38,4 +38,3 @@ self.addEventListener("fetch", (e) => {
     })
   );
 });
-//(註：內容由 AI 生成)

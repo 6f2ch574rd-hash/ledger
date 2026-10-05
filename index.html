@@ -43,6 +43,16 @@ table{width:100%;border-collapse:collapse;}td,th{padding:8px;border-bottom:1px s
 <h2 style="color:#9E203E">📒 LocalLedger <span id="syncDot" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#28a745;margin-left:6px;cursor:pointer;" onclick="showSyncStatus()"></span></h2>
 
 <div class="page active" id="pageRecord">
+<div class="card" style="background:linear-gradient(135deg,#9E203E,#7a1830);color:#fff;">
+<div class="card-body" style="padding:20px 16px;">
+<p style="margin:0 0 4px;font-size:13px;opacity:0.85;">本月帳戶餘額</p>
+<p style="margin:0 0 14px;font-size:30px;font-weight:bold;" id="homeBalance">0</p>
+<div style="display:flex;gap:10px;">
+<div style="flex:1;background:rgba(255,255,255,0.15);border-radius:10px;padding:10px;text-align:center;font-size:13px;">💸 支出<br><strong id="homeExp" style="font-size:17px;">0</strong></div>
+<div style="flex:1;background:rgba(255,255,255,0.15);border-radius:10px;padding:10px;text-align:center;font-size:13px;">💰 收入<br><strong id="homeInc" style="font-size:17px;">0</strong></div>
+</div>
+</div></div>
+<div class="card"><div class="card-head" style="background:#fff;color:#9E203E;font-size:14px;border-bottom:1px solid #f0e0e4;padding:10px 16px;">📂 點擊分類查看明細</div><div class="card-body" style="padding:10px 16px;" id="homeCatList"></div></div>
 <div class="card"><div class="card-head" id="cardTitle">記支出</div><div class="card-body">
 <div style="display:flex;border:1px solid #eee;border-radius:10px;overflow:hidden;margin-bottom:12px;">
 <button class="btn btn-wine" id="btnExp" style="flex:1;border-radius:0;" onclick="setType('expense')">💸 支出</button>
@@ -68,9 +78,14 @@ table{width:100%;border-collapse:collapse;}td,th{padding:8px;border-bottom:1px s
 
 <div class="page" id="pageList">
 <div class="card"><div class="card-head">收支清單</div><div class="card-body">
-<select id="filterType" onchange="renderList()">
-<option value="all">全部</option><option value="expense">僅支出</option><option value="income">僅收入</option>
+<div style="display:flex;gap:8px;">
+<select id="filterType" onchange="renderList()" style="flex:1;margin:0 0 12px;">
+<option value="all">全部類型</option><option value="expense">僅支出</option><option value="income">僅收入</option>
 </select>
+<select id="filterCat" onchange="renderList()" style="flex:1;margin:0 0 12px;">
+<option value="all">全部分類</option>
+</select>
+</div>
 <div id="listBox"></div>
 </div></div>
 </div>
@@ -133,6 +148,7 @@ let allData = [];
 let quickCats = JSON.parse(localStorage.getItem("localLedgerCats") || '["餐飲","交通","購物","娛樂","居家","醫療","薪水"]');
 let editingId = null;
 let pendingRows = null;
+let pendingFormat = 6; // 預設軟體自身匯出格式，6欄；10為手寫記錄格式
 let pieShowType = "expense";
 let pieChart = null;
 const chartPalette = ["#9E203E","#E8A0A8","#E67E5A","#E8C56A","#4A8B6F","#6A8FBF","#9B7FBF","#D9B38C"];
@@ -222,16 +238,22 @@ async function loadData(){
     const {data} = await sb.from("transactions").select("*").eq("user_id", FIXED_UID).order("date",{ascending:false});
     allData = data || [];
     document.getElementById("syncDot").style.background = "#28a745";
-    renderList(); renderStat();
+    renderList(); renderStat(); renderHomeSummary();
   }catch(e){
     document.getElementById("syncDot").style.background = "#dc3545";
-    toast("⚠️ 雲端連線失敗","#fd7e14");
+    toast("⚠️ 雲端連線失敗："+e.message, "#dc3545");
   }
 }
 function renderList(){
   const filter = document.getElementById("filterType").value;
+  const filterCat = document.getElementById("filterCat").value;
+  const catSet = [...new Set(allData.map(r=>r.category))];
+  const catSel = document.getElementById("filterCat");
+  const curCat = catSel.value;
+  catSel.innerHTML = '<option value="all">全部分類</option>' + catSet.map(c=>`<option value="${c}" ${c===curCat?'selected':''}>${c}</option>`).join("");
   let data = [...allData];
   if(filter!=="all") data = data.filter(r=>r.type===filter);
+  if(filterCat!=="all") data = data.filter(r=>r.category===filterCat);
   const box = document.getElementById("listBox");
   if(data.length===0){box.innerHTML="<p style='color:#888'>尚無記錄</p>";return;}
   let html = "<table><tr><th>日期</th><th>名稱</th><th>金額</th><th></th></tr>";
@@ -244,6 +266,48 @@ function renderList(){
     <button style="color:red;border:none;background:none;cursor:pointer;" onclick="doDel(${r.id})">刪除</button></td></tr>`;
   });
   box.innerHTML = html + "</table>";
+}
+function goCategory(cat, type){
+  document.getElementById("filterType").value = type;
+  document.getElementById("filterCat").value = cat;
+  renderList();
+  toast(`已篩選「${cat}」明細`);
+  goPage("pageList", document.querySelectorAll(".nav button")[1]);
+}
+function renderHomeSummary(){
+  const now = new Date();
+  const ms = new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+  const me = today();
+  let exp=0,inc=0; const expCat={}, incCat={};
+  allData.forEach(r=>{
+    if(r.date<ms||r.date>me) return;
+    if(r.type==="expense"){exp+=r.amount; expCat[r.category]=(expCat[r.category]||0)+r.amount;}
+    else{inc+=r.amount; incCat[r.category]=(incCat[r.category]||0)+r.amount;}
+  });
+  document.getElementById("homeExp").textContent = exp.toLocaleString();
+  document.getElementById("homeInc").textContent = inc.toLocaleString();
+  const bal = inc-exp;
+  const balEl = document.getElementById("homeBalance");
+  balEl.textContent = (bal>=0?"":"-")+"NT$"+Math.abs(bal).toLocaleString();
+  const box = document.getElementById("homeCatList");
+  let html = "";
+  const expEntries = Object.entries(expCat).sort((a,b)=>b[1]-a[1]);
+  const incEntries = Object.entries(incCat).sort((a,b)=>b[1]-a[1]);
+  if(expEntries.length===0 && incEntries.length===0){
+    box.innerHTML = "<p style='color:#aaa;font-size:13px;margin:4px 0;'>本月尚無記錄</p>";
+    return;
+  }
+  expEntries.forEach(([cat,amt])=>{
+    html += `<div onclick="goCategory('${cat}','expense')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 4px;border-bottom:1px solid #f5f0f1;cursor:pointer;">
+      <span style="font-size:14px;">💸 ${cat}</span>
+      <span style="font-size:14px;font-weight:bold;color:#9E203E;">${amt.toLocaleString()}</span></div>`;
+  });
+  incEntries.forEach(([cat,amt])=>{
+    html += `<div onclick="goCategory('${cat}','income')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 4px;border-bottom:1px solid #f0f7f3;cursor:pointer;">
+      <span style="font-size:14px;">💰 ${cat}</span>
+      <span style="font-size:14px;font-weight:bold;color:#27AE60;">${amt.toLocaleString()}</span></div>`;
+  });
+  box.innerHTML = html;
 }
 function editRecord(id){
   const rec = allData.find(r=>r.id===id); if(!rec) return;
@@ -342,10 +406,12 @@ function readImportFile(){
     let text = ev.target.result;
     if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
     const lines = text.split(/\r?\n/).filter(l=>l.trim()!=="");
+    const header = lines[0].split(",")[0];
+    pendingFormat = (header.trim() === "日期") ? 10 : 6;
     pendingRows = lines.slice(1).map(l=>l.split(","));
-    document.getElementById("impStatus").textContent = `讀到 ${pendingRows.length} 筆，點確認匯入`;
+    document.getElementById("impStatus").textContent = `讀到 ${pendingRows.length} 筆，格式${pendingFormat==10?"(手寫記錄)":"(軟體備份)"}，點確認匯入`;
     document.getElementById("btnDoImp").style.display = "block";
-    toast(`✅ 讀取成功，共 ${pendingRows.length} 筆`);
+    toast(`✅ 讀取成功，共 ${pendingRows.length} 筆，已自動識別格式`);
   };
   reader.readAsText(f,"utf-8");
 }
@@ -354,16 +420,27 @@ async function doImport(){
   toast("開始匯入...","#fd7e14");
   let ok=0,skip=0;
   for(const cols of pendingRows){
-    if(cols.length<5){skip++;continue;}
+    if(cols.length<4){skip++;continue;}
     try{
+      let date, name, category, amount, type, note;
+      if(pendingFormat === 10){
+        date = cols[0];
+        name = cols[2].replace(/"/g,"");
+        category = cols[3]||"其他";
+        amount = Number(cols[4]);
+        type = (cols[9]||"支出").trim()==="收入"?"income":"expense";
+        note = cols[7]||"";
+      }else{
+        date = cols[0];
+        name = cols[1].replace(/"/g,"");
+        category = cols[2]||"其他";
+        amount = Number(cols[3]);
+        type = (cols[4]||"expense").trim();
+        note = cols[5]||"";
+      }
+      if(isNaN(amount) || amount<=0){skip++;continue;}
       await sb.from("transactions").insert({
-        user_id: FIXED_UID,
-        date: cols[0],
-        name: cols[2].replace(/"/g,""),
-        category: cols[3]||"其他",
-        amount: Number(cols[4]),
-        type: (cols[9]||"expense").trim()==="支出"?"expense":"income",
-        note: cols[7]||""
+        user_id: FIXED_UID, date, name, category, amount, type, note
       });
       ok++;
     }catch(e){skip++;}
@@ -383,6 +460,7 @@ window.onload = async function(){
   document.getElementById("fDate").value = today();
   renderCats();
   await loadData();
+  renderHomeSummary();
   toast("🎉 歡迎回來，記帳本已就緒");
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
